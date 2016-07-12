@@ -1,0 +1,10 @@
+/home/user/git/pentaho-kettle/plugins/meta-inject-plugin/src/main/java/org/pentaho/di/trans/steps/metainject/MetaInjectMeta.java
+/home/user/git/pentaho-kettle/plugins/meta-inject-plugin/src/main/java/org/pentaho/di/ui/trans/steps/metainject/MetaInjectDialog.java
+/home/user/git/pentaho-kettle/plugins/meta-inject-plugin/src/main/java/org/pentaho/di/trans/steps/metainject/RepositoryExporterExtension.java
+/home/user/git/pentaho-kettle/plugins/meta-inject-plugin/src/main/java/org/pentaho/di/trans/steps/metainject/TargetStepAttribute.java
+/home/user/git/pentaho-kettle/plugins/meta-inject-plugin/src/main/java/org/pentaho/di/trans/steps/metainject/MetaInjectData.java
+/home/user/git/pentaho-kettle/plugins/meta-inject-plugin/src/main/java/org/pentaho/di/trans/steps/metainject/MetaInjectMapping.java
+/home/user/git/pentaho-kettle/plugins/meta-inject-plugin/src/main/java/org/pentaho/di/trans/steps/metainject/RepositoryImporterExtension.java
+/home/user/git/pentaho-kettle/plugins/meta-inject-plugin/src/main/java/org/pentaho/di/trans/steps/metainject/SourceStepField.java
+/home/user/git/pentaho-kettle/plugins/meta-inject-plugin/src/main/java/org/pentaho/di/trans/steps/metainject/MetaInject.java
+/home/user/git/pentaho-kettle/plugins/meta-inject-plugin/src/main/java/org/pentaho/di/trans/steps/metainject/MetaInjectOutputField.java

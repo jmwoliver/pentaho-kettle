@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>MetaInjectOutputField.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">meta-inject-plugin</a> &gt; <a href="index.source.html" class="el_package">org.pentaho.di.trans.steps.metainject</a> &gt; <span class="el_source">MetaInjectOutputField.java</span></div><h1>MetaInjectOutputField.java</h1><pre class="source lang-java linenums">/*! ******************************************************************************
+ *
+ * Pentaho Data Integration
+ *
+ * Copyright (C) 2002-2015 by Pentaho : http://www.pentaho.com
+ *
+ *******************************************************************************
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ ******************************************************************************/
+
+package org.pentaho.di.trans.steps.metainject;
+
+import org.pentaho.di.core.exception.KettlePluginException;
+import org.pentaho.di.core.exception.KettleValueException;
+import org.pentaho.di.core.injection.Injection;
+import org.pentaho.di.core.injection.InjectionTypeConverter;
+import org.pentaho.di.core.row.ValueMetaInterface;
+import org.pentaho.di.core.row.value.ValueMetaBase;
+import org.pentaho.di.core.row.value.ValueMetaFactory;
+
+public class MetaInjectOutputField {
+
+  @Injection( name = &quot;SOURCE_OUTPUT_NAME&quot;, group = &quot;SOURCE_OUTPUT_FIELDS&quot; )
+  private String name;
+
+  @Injection( name = &quot;SOURCE_OUTPUT_TYPE&quot;, group = &quot;SOURCE_OUTPUT_FIELDS&quot;, converter = DataTypeConverter.class )
+  private int type;
+
+  @Injection( name = &quot;SOURCE_OUTPUT_LENGTH&quot;, group = &quot;SOURCE_OUTPUT_FIELDS&quot; )
+  private int length;
+
+  @Injection( name = &quot;SOURCE_OUTPUT_PRECISION&quot;, group = &quot;SOURCE_OUTPUT_FIELDS&quot; )
+  private int precision;
+
+<span class="fc" id="L47">  public MetaInjectOutputField() {</span>
+<span class="fc" id="L48">  }</span>
+
+  public MetaInjectOutputField( String name, int type, int length, int precision ) {
+<span class="fc" id="L51">    super();</span>
+<span class="fc" id="L52">    this.name = name;</span>
+<span class="fc" id="L53">    this.type = type;</span>
+<span class="fc" id="L54">    this.length = length;</span>
+<span class="fc" id="L55">    this.precision = precision;</span>
+<span class="fc" id="L56">  }</span>
+
+  public String getTypeDescription() {
+<span class="fc" id="L59">    return ValueMetaFactory.getValueMetaName( type );</span>
+  }
+
+  public String getName() {
+<span class="fc" id="L63">    return name;</span>
+  }
+
+  public void setName( String name ) {
+<span class="fc" id="L67">    this.name = name;</span>
+<span class="fc" id="L68">  }</span>
+
+  public int getType() {
+<span class="fc" id="L71">    return type;</span>
+  }
+
+  public void setType( int type ) {
+<span class="fc" id="L75">    this.type = type;</span>
+<span class="fc" id="L76">  }</span>
+
+  public int getLength() {
+<span class="fc" id="L79">    return length;</span>
+  }
+
+  public void setLength( int length ) {
+<span class="fc" id="L83">    this.length = length;</span>
+<span class="fc" id="L84">  }</span>
+
+  public int getPrecision() {
+<span class="fc" id="L87">    return precision;</span>
+  }
+
+  public void setPrecision( int precision ) {
+<span class="fc" id="L91">    this.precision = precision;</span>
+<span class="fc" id="L92">  }</span>
+
+  public ValueMetaInterface createValueMeta() throws KettlePluginException {
+<span class="nc" id="L95">    return ValueMetaFactory.createValueMeta( name, type, length, precision );</span>
+  }
+
+<span class="fc" id="L98">  public static class DataTypeConverter extends InjectionTypeConverter {</span>
+    @Override
+    public int string2intPrimitive( String v ) throws KettleValueException {
+<span class="fc" id="L101">      return ValueMetaBase.getType( v );</span>
+    }
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.5.201505241946</span></div></body></html>

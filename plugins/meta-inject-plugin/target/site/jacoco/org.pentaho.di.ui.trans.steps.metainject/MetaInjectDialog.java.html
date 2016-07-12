@@ -1,0 +1,1511 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>MetaInjectDialog.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">meta-inject-plugin</a> &gt; <a href="index.source.html" class="el_package">org.pentaho.di.ui.trans.steps.metainject</a> &gt; <span class="el_source">MetaInjectDialog.java</span></div><h1>MetaInjectDialog.java</h1><pre class="source lang-java linenums">/*! ******************************************************************************
+ *
+ * Pentaho Data Integration
+ *
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
+ *
+ *******************************************************************************
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ ******************************************************************************/
+
+package org.pentaho.di.ui.trans.steps.metainject;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.vfs2.FileObject;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.custom.CCombo;
+import org.eclipse.swt.custom.CTabFolder;
+import org.eclipse.swt.custom.CTabItem;
+import org.eclipse.swt.custom.ScrolledComposite;
+import org.eclipse.swt.events.ModifyEvent;
+import org.eclipse.swt.events.ModifyListener;
+import org.eclipse.swt.events.SelectionAdapter;
+import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.events.ShellAdapter;
+import org.eclipse.swt.events.ShellEvent;
+import org.eclipse.swt.graphics.Point;
+import org.eclipse.swt.graphics.Rectangle;
+import org.eclipse.swt.layout.FillLayout;
+import org.eclipse.swt.layout.FormAttachment;
+import org.eclipse.swt.layout.FormData;
+import org.eclipse.swt.layout.FormLayout;
+import org.eclipse.swt.widgets.Button;
+import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Event;
+import org.eclipse.swt.widgets.Group;
+import org.eclipse.swt.widgets.Label;
+import org.eclipse.swt.widgets.Listener;
+import org.eclipse.swt.widgets.MessageBox;
+import org.eclipse.swt.widgets.Shell;
+import org.eclipse.swt.widgets.TableItem;
+import org.eclipse.swt.widgets.Text;
+import org.eclipse.swt.widgets.Tree;
+import org.eclipse.swt.widgets.TreeColumn;
+import org.eclipse.swt.widgets.TreeItem;
+import org.pentaho.di.core.Const;
+import org.pentaho.di.core.ObjectLocationSpecificationMethod;
+import org.pentaho.di.core.Props;
+import org.pentaho.di.core.exception.KettleException;
+import org.pentaho.di.core.gui.SpoonFactory;
+import org.pentaho.di.core.gui.SpoonInterface;
+import org.pentaho.di.core.injection.bean.BeanInjectionInfo;
+import org.pentaho.di.core.row.RowMetaInterface;
+import org.pentaho.di.core.row.ValueMeta;
+import org.pentaho.di.core.row.ValueMetaInterface;
+import org.pentaho.di.core.row.value.ValueMetaFactory;
+import org.pentaho.di.core.vfs.KettleVFS;
+import org.pentaho.di.i18n.BaseMessages;
+import org.pentaho.di.repository.ObjectId;
+import org.pentaho.di.repository.RepositoryDirectoryInterface;
+import org.pentaho.di.repository.RepositoryElementMetaInterface;
+import org.pentaho.di.repository.RepositoryObject;
+import org.pentaho.di.repository.RepositoryObjectType;
+import org.pentaho.di.trans.TransMeta;
+import org.pentaho.di.trans.step.BaseStepMeta;
+import org.pentaho.di.trans.step.StepDialogInterface;
+import org.pentaho.di.trans.step.StepInjectionMetaEntry;
+import org.pentaho.di.trans.step.StepMeta;
+import org.pentaho.di.trans.step.StepMetaInjectionInterface;
+import org.pentaho.di.trans.step.StepMetaInterface;
+import org.pentaho.di.trans.steps.metainject.MetaInject;
+import org.pentaho.di.trans.steps.metainject.MetaInjectMeta;
+import org.pentaho.di.trans.steps.metainject.MetaInjectOutputField;
+import org.pentaho.di.trans.steps.metainject.SourceStepField;
+import org.pentaho.di.trans.steps.metainject.TargetStepAttribute;
+import org.pentaho.di.ui.core.dialog.EnterSelectionDialog;
+import org.pentaho.di.ui.core.dialog.ErrorDialog;
+import org.pentaho.di.ui.core.gui.GUIResource;
+import org.pentaho.di.ui.core.widget.ColumnInfo;
+import org.pentaho.di.ui.core.widget.TableView;
+import org.pentaho.di.ui.core.widget.TextVar;
+import org.pentaho.di.ui.repository.dialog.SelectObjectDialog;
+import org.pentaho.di.ui.spoon.Spoon;
+import org.pentaho.di.ui.trans.dialog.TransDialog;
+import org.pentaho.di.ui.trans.step.BaseStepDialog;
+import org.pentaho.vfs.ui.VfsFileChooserDialog;
+
+public class MetaInjectDialog extends BaseStepDialog implements StepDialogInterface {
+  // private static final String STRING_TREE_NAME = &quot;META_INJECT_TREE&quot;;
+
+<span class="nc" id="L113">  private static Class&lt;?&gt; PKG = MetaInjectMeta.class; // for i18n purposes, needed by Translator2!!</span>
+
+  private MetaInjectMeta metaInjectMeta;
+
+  private CTabFolder wTabFolder;
+  private FormData fdTabFolder;
+
+  private CTabItem wFileTab;
+  private ScrolledComposite wFileSComp;
+  private Composite wFileComp;
+
+  private CTabItem wOptionsTab;
+  private ScrolledComposite wOptionsSComp;
+  private Composite wOptionsComp;
+
+  private CTabItem wInjectTab;
+  private ScrolledComposite wInjectSComp;
+  private Composite wInjectComp;
+
+  private Group gTransGroup;
+
+  // File
+  //
+  private Button radioFilename;
+  private Button wbbFilename;
+  private TextVar wFilename;
+
+  // Repository by name
+  //
+  private Button radioByName;
+  private TextVar wTransname, wDirectory;
+  private Button wbTrans;
+
+  // Repository by reference
+  //
+  private Button radioByReference;
+  private Button wbByReference;
+  private TextVar wByReference;
+
+  // Edit the mapping transformation in Spoon
+  //
+  private Button wValidateTrans;
+  private Button wEditTrans;
+  private Button wNewTrans;
+
+<span class="nc" id="L158">  private TransMeta injectTransMeta = null;</span>
+
+  protected boolean transModified;
+
+  private ModifyListener lsMod;
+
+  private int middle;
+
+  private int margin;
+
+  private ObjectId referenceObjectId;
+  private ObjectLocationSpecificationMethod specificationMethod;
+
+  // the source step
+  //
+  private CCombo wSourceStep;
+
+  // The source step output fields...
+  //
+  private Label wlSourceFields;
+  private TableView wSourceFields;
+
+  // the target file
+  //
+  private TextVar wTargetFile;
+
+  // don't execute the transformation
+  //
+  private Button wNoExecution;
+
+  // the streaming source step
+  //
+  private Label wlStreamingSourceStep;
+  private CCombo wStreamingSourceStep;
+
+  // the streaming target step
+  //
+  private Label wlStreamingTargetStep;
+  private CCombo wStreamingTargetStep;
+
+  // The tree object to show the options...
+  //
+  private Tree wTree;
+
+  private Map&lt;TreeItem, TargetStepAttribute&gt; treeItemTargetMap;
+
+  private Map&lt;TargetStepAttribute, SourceStepField&gt; targetSourceMapping;
+
+  public MetaInjectDialog( Shell parent, Object in, TransMeta tr, String sname ) {
+<span class="nc" id="L207">    super( parent, (BaseStepMeta) in, tr, sname );</span>
+<span class="nc" id="L208">    metaInjectMeta = (MetaInjectMeta) in;</span>
+<span class="nc" id="L209">    transModified = false;</span>
+
+<span class="nc" id="L211">    targetSourceMapping = new HashMap&lt;TargetStepAttribute, SourceStepField&gt;();</span>
+<span class="nc" id="L212">    targetSourceMapping.putAll( metaInjectMeta.getTargetSourceMapping() );</span>
+<span class="nc" id="L213">  }</span>
+
+  public String open() {
+<span class="nc" id="L216">    Shell parent = getParent();</span>
+<span class="nc" id="L217">    Display display = parent.getDisplay();</span>
+
+<span class="nc" id="L219">    shell = new Shell( parent, SWT.DIALOG_TRIM | SWT.RESIZE | SWT.MIN | SWT.MAX );</span>
+<span class="nc" id="L220">    props.setLook( shell );</span>
+<span class="nc" id="L221">    setShellImage( shell, metaInjectMeta );</span>
+
+<span class="nc" id="L223">    lsMod = new ModifyListener() {</span>
+      public void modifyText( ModifyEvent e ) {
+<span class="nc" id="L225">        metaInjectMeta.setChanged();</span>
+<span class="nc" id="L226">      }</span>
+    };
+<span class="nc" id="L228">    changed = metaInjectMeta.hasChanged();</span>
+
+<span class="nc" id="L230">    FormLayout formLayout = new FormLayout();</span>
+<span class="nc" id="L231">    formLayout.marginWidth = Const.FORM_MARGIN;</span>
+<span class="nc" id="L232">    formLayout.marginHeight = Const.FORM_MARGIN;</span>
+
+<span class="nc" id="L234">    shell.setLayout( formLayout );</span>
+<span class="nc" id="L235">    shell.setText( BaseMessages.getString( PKG, &quot;MetaInjectDialog.Shell.Title&quot; ) );</span>
+
+<span class="nc" id="L237">    middle = props.getMiddlePct();</span>
+<span class="nc" id="L238">    margin = Const.MARGIN;</span>
+
+    // Stepname line
+<span class="nc" id="L241">    wlStepname = new Label( shell, SWT.RIGHT );</span>
+<span class="nc" id="L242">    wlStepname.setText( BaseMessages.getString( PKG, &quot;MetaInjectDialog.Stepname.Label&quot; ) );</span>
+<span class="nc" id="L243">    props.setLook( wlStepname );</span>
+<span class="nc" id="L244">    fdlStepname = new FormData();</span>
+<span class="nc" id="L245">    fdlStepname.left = new FormAttachment( 0, 0 );</span>
+<span class="nc" id="L246">    fdlStepname.right = new FormAttachment( middle, -margin );</span>
+<span class="nc" id="L247">    fdlStepname.top = new FormAttachment( 0, margin );</span>
+<span class="nc" id="L248">    wlStepname.setLayoutData( fdlStepname );</span>
+<span class="nc" id="L249">    wStepname = new Text( shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER );</span>
+<span class="nc" id="L250">    wStepname.setText( stepname );</span>
+<span class="nc" id="L251">    props.setLook( wStepname );</span>
+<span class="nc" id="L252">    wStepname.addModifyListener( lsMod );</span>
+<span class="nc" id="L253">    fdStepname = new FormData();</span>
+<span class="nc" id="L254">    fdStepname.left = new FormAttachment( middle, 0 );</span>
+<span class="nc" id="L255">    fdStepname.top = new FormAttachment( 0, margin );</span>
+<span class="nc" id="L256">    fdStepname.right = new FormAttachment( 100, 0 );</span>
+<span class="nc" id="L257">    wStepname.setLayoutData( fdStepname );</span>
+
+<span class="nc" id="L259">    wTabFolder = new CTabFolder( shell, SWT.BORDER );</span>
+<span class="nc" id="L260">    props.setLook( wTabFolder, Props.WIDGET_STYLE_TAB );</span>
+<span class="nc" id="L261">    wTabFolder.setSimple( false );</span>
+
+    // Some buttons
+<span class="nc" id="L264">    wOK = new Button( shell, SWT.PUSH );</span>
+<span class="nc" id="L265">    wOK.setText( BaseMessages.getString( PKG, &quot;System.Button.OK&quot; ) );</span>
+<span class="nc" id="L266">    wCancel = new Button( shell, SWT.PUSH );</span>
+<span class="nc" id="L267">    wCancel.setText( BaseMessages.getString( PKG, &quot;System.Button.Cancel&quot; ) );</span>
+<span class="nc" id="L268">    setButtonPositions( new Button[] { wOK, wCancel }, margin, null );</span>
+
+<span class="nc" id="L270">    fdTabFolder = new FormData();</span>
+<span class="nc" id="L271">    fdTabFolder.left = new FormAttachment( 0, 0 );</span>
+<span class="nc" id="L272">    fdTabFolder.top = new FormAttachment( wStepname, margin );</span>
+<span class="nc" id="L273">    fdTabFolder.right = new FormAttachment( 100, 0 );</span>
+<span class="nc" id="L274">    fdTabFolder.bottom = new FormAttachment( wOK, -margin * 2 );</span>
+<span class="nc" id="L275">    wTabFolder.setLayoutData( fdTabFolder );</span>
+
+<span class="nc" id="L277">    addFileTab();</span>
+<span class="nc" id="L278">    addOptionsTab();</span>
+<span class="nc" id="L279">    addInjectTab();</span>
+
+    // Add listeners
+<span class="nc" id="L282">    lsCancel = new Listener() {</span>
+      public void handleEvent( Event e ) {
+<span class="nc" id="L284">        cancel();</span>
+<span class="nc" id="L285">      }</span>
+    };
+<span class="nc" id="L287">    lsOK = new Listener() {</span>
+      public void handleEvent( Event e ) {
+<span class="nc" id="L289">        ok();</span>
+<span class="nc" id="L290">      }</span>
+    };
+
+<span class="nc" id="L293">    wCancel.addListener( SWT.Selection, lsCancel );</span>
+<span class="nc" id="L294">    wOK.addListener( SWT.Selection, lsOK );</span>
+
+<span class="nc" id="L296">    lsDef = new SelectionAdapter() {</span>
+      public void widgetDefaultSelected( SelectionEvent e ) {
+<span class="nc" id="L298">        ok();</span>
+<span class="nc" id="L299">      }</span>
+    };
+
+<span class="nc" id="L302">    wStepname.addSelectionListener( lsDef );</span>
+<span class="nc" id="L303">    wFilename.addSelectionListener( lsDef );</span>
+<span class="nc" id="L304">    wTransname.addSelectionListener( lsDef );</span>
+
+    // Detect X or ALT-F4 or something that kills this window...
+<span class="nc" id="L307">    shell.addShellListener( new ShellAdapter() {</span>
+      public void shellClosed( ShellEvent e ) {
+<span class="nc" id="L309">        cancel();</span>
+<span class="nc" id="L310">      }</span>
+    } );
+
+    // Set the shell size, based upon previous time...
+<span class="nc" id="L314">    setSize();</span>
+
+<span class="nc" id="L316">    getData();</span>
+<span class="nc" id="L317">    metaInjectMeta.setChanged( changed );</span>
+
+<span class="nc" id="L319">    shell.open();</span>
+
+<span class="nc" id="L321">    checkInvalidMapping();</span>
+
+<span class="nc bnc" id="L323" title="All 2 branches missed.">    while ( !shell.isDisposed() ) {</span>
+<span class="nc bnc" id="L324" title="All 2 branches missed.">      if ( !display.readAndDispatch() ) {</span>
+<span class="nc" id="L325">        display.sleep();</span>
+      }
+    }
+<span class="nc" id="L328">    return stepname;</span>
+  }
+
+  private void checkInvalidMapping() {
+<span class="nc bnc" id="L332" title="All 2 branches missed.">    if ( injectTransMeta == null ) {</span>
+      try {
+<span class="nc" id="L334">        loadTransformation();</span>
+<span class="nc" id="L335">      } catch ( KettleException e ) {</span>
+<span class="nc" id="L336">        showErrorOnLoadTransformationDialog( e );</span>
+<span class="nc" id="L337">        return;</span>
+<span class="nc" id="L338">      }</span>
+    }
+<span class="nc" id="L340">    Set&lt;SourceStepField&gt; unavailableSourceSteps =</span>
+<span class="nc" id="L341">        MetaInject.getUnavailableSourceSteps( targetSourceMapping, transMeta, stepMeta );</span>
+<span class="nc" id="L342">    Set&lt;TargetStepAttribute&gt; unavailableTargetSteps =</span>
+<span class="nc" id="L343">        MetaInject.getUnavailableTargetSteps( targetSourceMapping, injectTransMeta );</span>
+<span class="nc" id="L344">    Set&lt;TargetStepAttribute&gt; missingTargetKeys =</span>
+<span class="nc" id="L345">        MetaInject.getUnavailableTargetKeys( targetSourceMapping, injectTransMeta, unavailableTargetSteps );</span>
+<span class="nc bnc" id="L346" title="All 6 branches missed.">    if ( unavailableSourceSteps.isEmpty() &amp;&amp; unavailableTargetSteps.isEmpty() &amp;&amp; missingTargetKeys.isEmpty() ) {</span>
+<span class="nc" id="L347">      return;</span>
+    }
+<span class="nc" id="L349">    showInvalidMappingDialog( unavailableSourceSteps, unavailableTargetSteps, missingTargetKeys );</span>
+<span class="nc" id="L350">  }</span>
+
+  private void showInvalidMappingDialog( Set&lt;SourceStepField&gt; unavailableSourceSteps,
+      Set&lt;TargetStepAttribute&gt; unavailableTargetSteps, Set&lt;TargetStepAttribute&gt; missingTargetKeys ) {
+<span class="nc" id="L354">    MessageBox mb = new MessageBox( shell, SWT.YES | SWT.NO | SWT.ICON_QUESTION );</span>
+<span class="nc" id="L355">    mb.setMessage( BaseMessages.getString( PKG, &quot;MetaInjectDialog.InvalidMapping.Question&quot; ) );</span>
+<span class="nc" id="L356">    mb.setText( BaseMessages.getString( PKG, &quot;MetaInjectDialog.InvalidMapping.Title&quot; ) );</span>
+<span class="nc" id="L357">    int id = mb.open();</span>
+<span class="nc bnc" id="L358" title="All 2 branches missed.">    if ( id == SWT.YES ) {</span>
+<span class="nc" id="L359">      MetaInject.removeUnavailableStepsFromMapping( targetSourceMapping, unavailableSourceSteps,</span>
+          unavailableTargetSteps );
+<span class="nc bnc" id="L361" title="All 2 branches missed.">      for ( TargetStepAttribute target : missingTargetKeys ) {</span>
+<span class="nc" id="L362">        targetSourceMapping.remove( target );</span>
+<span class="nc" id="L363">      }</span>
+    }
+<span class="nc" id="L365">  }</span>
+
+  private void showErrorOnLoadTransformationDialog( KettleException e ) {
+<span class="nc" id="L368">    new ErrorDialog( shell, BaseMessages.getString( PKG, &quot;MetaInjectDialog.ErrorLoadingSpecifiedTransformation.Title&quot; ),</span>
+<span class="nc" id="L369">        BaseMessages.getString( PKG, &quot;MetaInjectDialog.ErrorLoadingSpecifiedTransformation.Message&quot; ), e );</span>
+<span class="nc" id="L370">  }</span>
+
+  private void addFileTab() {
+    // ////////////////////////
+    // START OF FILE TAB ///
+    // ////////////////////////
+
+<span class="nc" id="L377">    wFileTab = new CTabItem( wTabFolder, SWT.NONE );</span>
+<span class="nc" id="L378">    wFileTab.setText( BaseMessages.getString( PKG, &quot;MetaInjectDialog.FileTab.TabTitle&quot; ) );</span>
+
+<span class="nc" id="L380">    wFileSComp = new ScrolledComposite( wTabFolder, SWT.V_SCROLL | SWT.H_SCROLL );</span>
+<span class="nc" id="L381">    wFileSComp.setLayout( new FillLayout() );</span>
+
+<span class="nc" id="L383">    wFileComp = new Composite( wFileSComp, SWT.NONE );</span>
+<span class="nc" id="L384">    props.setLook( wFileComp );</span>
+
+<span class="nc" id="L386">    FormLayout fileLayout = new FormLayout();</span>
+<span class="nc" id="L387">    fileLayout.marginWidth = 3;</span>
+<span class="nc" id="L388">    fileLayout.marginHeight = 3;</span>
+<span class="nc" id="L389">    wFileComp.setLayout( fileLayout );</span>
+
+    // //////////////////////////////////////////////////
+    // The transformation template box
+    // //////////////////////////////////////////////////
+    //
+<span class="nc" id="L395">    gTransGroup = new Group( wFileComp, SWT.SHADOW_ETCHED_IN );</span>
+<span class="nc" id="L396">    gTransGroup.setText( BaseMessages.getString( PKG, &quot;MetaInjectDialog.TransGroup.Label&quot; ) );</span>
+<span class="nc" id="L397">    gTransGroup.setBackground( shell.getBackground() ); // the default looks</span>
+    // ugly
+<span class="nc" id="L399">    FormLayout transGroupLayout = new FormLayout();</span>
+<span class="nc" id="L400">    transGroupLayout.marginLeft = margin * 2;</span>
+<span class="nc" id="L401">    transGroupLayout.marginTop = margin * 2;</span>
+<span class="nc" id="L402">    transGroupLayout.marginRight = margin * 2;</span>
+<span class="nc" id="L403">    transGroupLayout.marginBottom = margin * 2;</span>
+<span class="nc" id="L404">    gTransGroup.setLayout( transGroupLayout );</span>
+
+    // Radio button: The mapping is in a file
+    //
+<span class="nc" id="L408">    radioFilename = new Button( gTransGroup, SWT.RADIO );</span>
+<span class="nc" id="L409">    props.setLook( radioFilename );</span>
+<span class="nc" id="L410">    radioFilename.setSelection( false );</span>
+<span class="nc" id="L411">    radioFilename.setText( BaseMessages.getString( PKG, &quot;MetaInjectDialog.RadioFile.Label&quot; ) );</span>
+<span class="nc" id="L412">    radioFilename.setToolTipText( BaseMessages.getString( PKG, &quot;MetaInjectDialog.RadioFile.Tooltip&quot;, Const.CR ) );</span>
+<span class="nc" id="L413">    FormData fdFileRadio = new FormData();</span>
+<span class="nc" id="L414">    fdFileRadio.left = new FormAttachment( 0, 0 );</span>
+<span class="nc" id="L415">    fdFileRadio.right = new FormAttachment( 100, 0 );</span>
+<span class="nc" id="L416">    fdFileRadio.top = new FormAttachment( 0, 0 );</span>
+<span class="nc" id="L417">    radioFilename.setLayoutData( fdFileRadio );</span>
+<span class="nc" id="L418">    radioFilename.addSelectionListener( new SelectionAdapter() {</span>
+      public void widgetSelected( SelectionEvent e ) {
+<span class="nc" id="L420">        specificationMethod = ObjectLocationSpecificationMethod.FILENAME;</span>
+<span class="nc" id="L421">        setRadioButtons();</span>
+<span class="nc" id="L422">      }</span>
+    } );
+
+<span class="nc" id="L425">    wbbFilename = new Button( gTransGroup, SWT.PUSH | SWT.CENTER ); // Browse</span>
+<span class="nc" id="L426">    props.setLook( wbbFilename );</span>
+<span class="nc" id="L427">    wbbFilename.setText( BaseMessages.getString( PKG, &quot;System.Button.Browse&quot; ) );</span>
+<span class="nc" id="L428">    wbbFilename.setToolTipText( BaseMessages.getString( PKG, &quot;System.Tooltip.Browse&quot; ) );</span>
+<span class="nc" id="L429">    FormData fdbFilename = new FormData();</span>
+<span class="nc" id="L430">    fdbFilename.right = new FormAttachment( 100, 0 );</span>
+<span class="nc" id="L431">    fdbFilename.top = new FormAttachment( radioFilename, margin );</span>
+<span class="nc" id="L432">    wbbFilename.setLayoutData( fdbFilename );</span>
+<span class="nc" id="L433">    wbbFilename.addSelectionListener( new SelectionAdapter() {</span>
+      public void widgetSelected( SelectionEvent e ) {
+<span class="nc" id="L435">        selectFileTrans( true );</span>
+<span class="nc" id="L436">      }</span>
+    } );
+
+<span class="nc" id="L439">    wFilename = new TextVar( transMeta, gTransGroup, SWT.SINGLE | SWT.LEFT | SWT.BORDER );</span>
+<span class="nc" id="L440">    props.setLook( wFilename );</span>
+<span class="nc" id="L441">    wFilename.addModifyListener( lsMod );</span>
+<span class="nc" id="L442">    FormData fdFilename = new FormData();</span>
+<span class="nc" id="L443">    fdFilename.left = new FormAttachment( 0, 25 );</span>
+<span class="nc" id="L444">    fdFilename.right = new FormAttachment( wbbFilename, -margin );</span>
+<span class="nc" id="L445">    fdFilename.top = new FormAttachment( wbbFilename, 0, SWT.CENTER );</span>
+<span class="nc" id="L446">    wFilename.setLayoutData( fdFilename );</span>
+<span class="nc" id="L447">    wFilename.addModifyListener( new ModifyListener() {</span>
+      public void modifyText( ModifyEvent e ) {
+<span class="nc" id="L449">        specificationMethod = ObjectLocationSpecificationMethod.FILENAME;</span>
+<span class="nc" id="L450">        setRadioButtons();</span>
+<span class="nc" id="L451">      }</span>
+    } );
+
+    // Radio button: The mapping is in the repository
+    //
+<span class="nc" id="L456">    radioByName = new Button( gTransGroup, SWT.RADIO );</span>
+<span class="nc" id="L457">    props.setLook( radioByName );</span>
+<span class="nc" id="L458">    radioByName.setSelection( false );</span>
+<span class="nc" id="L459">    radioByName.setText( BaseMessages.getString( PKG, &quot;MetaInjectDialog.RadioRep.Label&quot; ) );</span>
+<span class="nc" id="L460">    radioByName.setToolTipText( BaseMessages.getString( PKG, &quot;MetaInjectDialog.RadioRep.Tooltip&quot;, Const.CR ) );</span>
+<span class="nc" id="L461">    FormData fdRepRadio = new FormData();</span>
+<span class="nc" id="L462">    fdRepRadio.left = new FormAttachment( 0, 0 );</span>
+<span class="nc" id="L463">    fdRepRadio.right = new FormAttachment( 100, 0 );</span>
+<span class="nc" id="L464">    fdRepRadio.top = new FormAttachment( wbbFilename, 2 * margin );</span>
+<span class="nc" id="L465">    radioByName.setLayoutData( fdRepRadio );</span>
+<span class="nc" id="L466">    radioByName.addSelectionListener( new SelectionAdapter() {</span>
+      public void widgetSelected( SelectionEvent e ) {
+<span class="nc" id="L468">        specificationMethod = ObjectLocationSpecificationMethod.REPOSITORY_BY_NAME;</span>
+<span class="nc" id="L469">        setRadioButtons();</span>
+<span class="nc" id="L470">      }</span>
+    } );
+<span class="nc" id="L472">    wbTrans = new Button( gTransGroup, SWT.PUSH | SWT.CENTER ); // Browse</span>
+<span class="nc" id="L473">    props.setLook( wbTrans );</span>
+<span class="nc" id="L474">    wbTrans.setText( BaseMessages.getString( PKG, &quot;MetaInjectDialog.Select.Button&quot; ) );</span>
+<span class="nc" id="L475">    wbTrans.setToolTipText( BaseMessages.getString( PKG, &quot;System.Tooltip.BrowseForFileOrDirAndAdd&quot; ) );</span>
+<span class="nc" id="L476">    FormData fdbTrans = new FormData();</span>
+<span class="nc" id="L477">    fdbTrans.right = new FormAttachment( 100, 0 );</span>
+<span class="nc" id="L478">    fdbTrans.top = new FormAttachment( radioByName, 2 * margin );</span>
+<span class="nc" id="L479">    wbTrans.setLayoutData( fdbTrans );</span>
+<span class="nc" id="L480">    wbTrans.addSelectionListener( new SelectionAdapter() {</span>
+      public void widgetSelected( SelectionEvent e ) {
+<span class="nc" id="L482">        selectRepositoryTrans();</span>
+<span class="nc" id="L483">      }</span>
+    } );
+
+<span class="nc" id="L486">    wDirectory = new TextVar( transMeta, gTransGroup, SWT.SINGLE | SWT.LEFT | SWT.BORDER );</span>
+<span class="nc" id="L487">    props.setLook( wDirectory );</span>
+<span class="nc" id="L488">    wDirectory.addModifyListener( lsMod );</span>
+<span class="nc" id="L489">    FormData fdTransDir = new FormData();</span>
+<span class="nc" id="L490">    fdTransDir.left = new FormAttachment( middle + ( 100 - middle ) / 2, 0 );</span>
+<span class="nc" id="L491">    fdTransDir.right = new FormAttachment( wbTrans, -margin );</span>
+<span class="nc" id="L492">    fdTransDir.top = new FormAttachment( wbTrans, 0, SWT.CENTER );</span>
+<span class="nc" id="L493">    wDirectory.setLayoutData( fdTransDir );</span>
+<span class="nc" id="L494">    wDirectory.addModifyListener( new ModifyListener() {</span>
+      public void modifyText( ModifyEvent e ) {
+<span class="nc" id="L496">        specificationMethod = ObjectLocationSpecificationMethod.REPOSITORY_BY_NAME;</span>
+<span class="nc" id="L497">        setRadioButtons();</span>
+<span class="nc" id="L498">      }</span>
+    } );
+
+<span class="nc" id="L501">    wTransname = new TextVar( transMeta, gTransGroup, SWT.SINGLE | SWT.LEFT | SWT.BORDER );</span>
+<span class="nc" id="L502">    props.setLook( wTransname );</span>
+<span class="nc" id="L503">    wTransname.addModifyListener( lsMod );</span>
+<span class="nc" id="L504">    FormData fdTransName = new FormData();</span>
+<span class="nc" id="L505">    fdTransName.left = new FormAttachment( 0, 25 );</span>
+<span class="nc" id="L506">    fdTransName.right = new FormAttachment( wDirectory, -margin );</span>
+<span class="nc" id="L507">    fdTransName.top = new FormAttachment( wbTrans, 0, SWT.CENTER );</span>
+<span class="nc" id="L508">    wTransname.setLayoutData( fdTransName );</span>
+<span class="nc" id="L509">    wTransname.addModifyListener( new ModifyListener() {</span>
+      public void modifyText( ModifyEvent e ) {
+<span class="nc" id="L511">        specificationMethod = ObjectLocationSpecificationMethod.REPOSITORY_BY_NAME;</span>
+<span class="nc" id="L512">        setRadioButtons();</span>
+<span class="nc" id="L513">      }</span>
+    } );
+
+    // Radio button: The mapping is in the repository
+    //
+<span class="nc" id="L518">    radioByReference = new Button( gTransGroup, SWT.RADIO );</span>
+<span class="nc" id="L519">    props.setLook( radioByReference );</span>
+<span class="nc" id="L520">    radioByReference.setSelection( false );</span>
+<span class="nc" id="L521">    radioByReference.setText( BaseMessages.getString( PKG, &quot;MetaInjectDialog.RadioRepByReference.Label&quot; ) );</span>
+<span class="nc" id="L522">    radioByReference.setToolTipText( BaseMessages.getString(</span>
+      PKG, &quot;MetaInjectDialog.RadioRepByReference.Tooltip&quot;, Const.CR ) );
+<span class="nc" id="L524">    FormData fdRadioByReference = new FormData();</span>
+<span class="nc" id="L525">    fdRadioByReference.left = new FormAttachment( 0, 0 );</span>
+<span class="nc" id="L526">    fdRadioByReference.right = new FormAttachment( 100, 0 );</span>
+<span class="nc" id="L527">    fdRadioByReference.top = new FormAttachment( wTransname, 2 * margin );</span>
+<span class="nc" id="L528">    radioByReference.setLayoutData( fdRadioByReference );</span>
+<span class="nc" id="L529">    radioByReference.addSelectionListener( new SelectionAdapter() {</span>
+      public void widgetSelected( SelectionEvent e ) {
+<span class="nc" id="L531">        specificationMethod = ObjectLocationSpecificationMethod.REPOSITORY_BY_REFERENCE;</span>
+<span class="nc" id="L532">        setRadioButtons();</span>
+<span class="nc" id="L533">      }</span>
+    } );
+
+<span class="nc" id="L536">    wbByReference = new Button( gTransGroup, SWT.PUSH | SWT.CENTER );</span>
+<span class="nc" id="L537">    props.setLook( wbByReference );</span>
+<span class="nc" id="L538">    wbByReference.setImage( GUIResource.getInstance().getImageTransGraph() );</span>
+<span class="nc" id="L539">    wbByReference.setToolTipText( BaseMessages.getString( PKG, &quot;MetaInjectDialog.SelectTrans.Tooltip&quot; ) );</span>
+<span class="nc" id="L540">    FormData fdbByReference = new FormData();</span>
+<span class="nc" id="L541">    fdbByReference.top = new FormAttachment( radioByReference, margin );</span>
+<span class="nc" id="L542">    fdbByReference.right = new FormAttachment( 100, 0 );</span>
+<span class="nc" id="L543">    wbByReference.setLayoutData( fdbByReference );</span>
+<span class="nc" id="L544">    wbByReference.addSelectionListener( new SelectionAdapter() {</span>
+      public void widgetSelected( SelectionEvent e ) {
+<span class="nc" id="L546">        selectTransformationByReference();</span>
+<span class="nc" id="L547">      }</span>
+    } );
+
+<span class="nc" id="L550">    wByReference = new TextVar( transMeta, gTransGroup, SWT.SINGLE | SWT.LEFT | SWT.BORDER | SWT.READ_ONLY );</span>
+<span class="nc" id="L551">    props.setLook( wByReference );</span>
+<span class="nc" id="L552">    wByReference.addModifyListener( lsMod );</span>
+<span class="nc" id="L553">    FormData fdByReference = new FormData();</span>
+<span class="nc" id="L554">    fdByReference.top = new FormAttachment( radioByReference, margin );</span>
+<span class="nc" id="L555">    fdByReference.left = new FormAttachment( 0, 25 );</span>
+<span class="nc" id="L556">    fdByReference.right = new FormAttachment( wbByReference, -margin );</span>
+<span class="nc" id="L557">    wByReference.setLayoutData( fdByReference );</span>
+<span class="nc" id="L558">    wByReference.addModifyListener( new ModifyListener() {</span>
+      public void modifyText( ModifyEvent e ) {
+<span class="nc" id="L560">        specificationMethod = ObjectLocationSpecificationMethod.REPOSITORY_BY_REFERENCE;</span>
+<span class="nc" id="L561">        setRadioButtons();</span>
+<span class="nc" id="L562">      }</span>
+    } );
+
+<span class="nc" id="L565">    wNewTrans = new Button( gTransGroup, SWT.PUSH | SWT.CENTER ); // Browse</span>
+<span class="nc" id="L566">    props.setLook( wNewTrans );</span>
+<span class="nc" id="L567">    wNewTrans.setText( BaseMessages.getString( PKG, &quot;MetaInjectDialog.New.Button&quot; ) );</span>
+<span class="nc" id="L568">    FormData fdNewTrans = new FormData();</span>
+<span class="nc" id="L569">    fdNewTrans.left = new FormAttachment( 0, 0 );</span>
+<span class="nc" id="L570">    fdNewTrans.top = new FormAttachment( wByReference, 3 * margin );</span>
+<span class="nc" id="L571">    wNewTrans.setLayoutData( fdNewTrans );</span>
+<span class="nc" id="L572">    wNewTrans.addSelectionListener( new SelectionAdapter() {</span>
+      public void widgetSelected( SelectionEvent e ) {
+<span class="nc" id="L574">        newTransformation();</span>
+<span class="nc" id="L575">      }</span>
+    } );
+
+<span class="nc" id="L578">    wEditTrans = new Button( gTransGroup, SWT.PUSH | SWT.CENTER ); // Browse</span>
+<span class="nc" id="L579">    props.setLook( wEditTrans );</span>
+<span class="nc" id="L580">    wEditTrans.setText( BaseMessages.getString( PKG, &quot;MetaInjectDialog.Edit.Button&quot; ) );</span>
+<span class="nc" id="L581">    wEditTrans.setToolTipText( BaseMessages.getString( PKG, &quot;System.Tooltip.BrowseForFileOrDirAndAdd&quot; ) );</span>
+<span class="nc" id="L582">    FormData fdEditTrans = new FormData();</span>
+<span class="nc" id="L583">    fdEditTrans.left = new FormAttachment( wNewTrans, 2 * margin );</span>
+<span class="nc" id="L584">    fdEditTrans.top = new FormAttachment( wByReference, 3 * margin );</span>
+<span class="nc" id="L585">    wEditTrans.setLayoutData( fdEditTrans );</span>
+<span class="nc" id="L586">    wEditTrans.addSelectionListener( new SelectionAdapter() {</span>
+      public void widgetSelected( SelectionEvent e ) {
+<span class="nc" id="L588">        editTrans();</span>
+<span class="nc" id="L589">      }</span>
+    } );
+
+<span class="nc" id="L592">    wValidateTrans = new Button( gTransGroup, SWT.PUSH | SWT.CENTER ); // Browse</span>
+<span class="nc" id="L593">    props.setLook( wValidateTrans );</span>
+<span class="nc" id="L594">    wValidateTrans.setText( BaseMessages.getString( PKG, &quot;MetaInjectDialog.Validate.Button&quot; ) );</span>
+<span class="nc" id="L595">    wValidateTrans.setToolTipText( BaseMessages.getString( PKG, &quot;MetaInjectDialog.Validate.Tooltip&quot; ) );</span>
+<span class="nc" id="L596">    FormData fdValidateTrans = new FormData();</span>
+<span class="nc" id="L597">    fdValidateTrans.left = new FormAttachment( wEditTrans, 2 * margin );</span>
+<span class="nc" id="L598">    fdValidateTrans.top = new FormAttachment( wByReference, 3 * margin );</span>
+<span class="nc" id="L599">    wValidateTrans.setLayoutData( fdValidateTrans );</span>
+<span class="nc" id="L600">    wValidateTrans.addSelectionListener( new SelectionAdapter() {</span>
+      public void widgetSelected( SelectionEvent e ) {
+<span class="nc" id="L602">        validateTrans();</span>
+<span class="nc" id="L603">      }</span>
+    } );
+
+<span class="nc" id="L606">    FormData fdTransGroup = new FormData();</span>
+<span class="nc" id="L607">    fdTransGroup.left = new FormAttachment( 0, 0 );</span>
+<span class="nc" id="L608">    fdTransGroup.top = new FormAttachment( wStepname, 2 * margin );</span>
+<span class="nc" id="L609">    fdTransGroup.right = new FormAttachment( 100, 0 );</span>
+    // fdTransGroup.bottom = new FormAttachment(wStepname, 350);
+<span class="nc" id="L611">    gTransGroup.setLayoutData( fdTransGroup );</span>
+
+<span class="nc" id="L613">    FormData fdFileComp = new FormData();</span>
+<span class="nc" id="L614">    fdFileComp.left = new FormAttachment( 0, 0 );</span>
+<span class="nc" id="L615">    fdFileComp.top = new FormAttachment( 0, 0 );</span>
+<span class="nc" id="L616">    fdFileComp.right = new FormAttachment( 100, 0 );</span>
+<span class="nc" id="L617">    fdFileComp.bottom = new FormAttachment( 100, 0 );</span>
+<span class="nc" id="L618">    wFileComp.setLayoutData( fdFileComp );</span>
+
+<span class="nc" id="L620">    wFileComp.pack();</span>
+<span class="nc" id="L621">    Rectangle bounds = wFileComp.getBounds();</span>
+
+<span class="nc" id="L623">    wFileSComp.setContent( wFileComp );</span>
+<span class="nc" id="L624">    wFileSComp.setExpandHorizontal( true );</span>
+<span class="nc" id="L625">    wFileSComp.setExpandVertical( true );</span>
+<span class="nc" id="L626">    wFileSComp.setMinWidth( bounds.width );</span>
+<span class="nc" id="L627">    wFileSComp.setMinHeight( bounds.height );</span>
+
+<span class="nc" id="L629">    wFileTab.setControl( wFileSComp );</span>
+
+    // ///////////////////////////////////////////////////////////
+    // / END OF FILE TAB
+    // ///////////////////////////////////////////////////////////
+<span class="nc" id="L634">  }</span>
+
+  private void addOptionsTab() {
+    // ////////////////////////
+    // START OF OPTIONS TAB ///
+    // ////////////////////////
+
+<span class="nc" id="L641">    wOptionsTab = new CTabItem( wTabFolder, SWT.NONE );</span>
+<span class="nc" id="L642">    wOptionsTab.setText( BaseMessages.getString( PKG, &quot;MetaInjectDialog.OptionsTab.TabTitle&quot; ) );</span>
+
+<span class="nc" id="L644">    wOptionsSComp = new ScrolledComposite( wTabFolder, SWT.V_SCROLL | SWT.H_SCROLL );</span>
+<span class="nc" id="L645">    wOptionsSComp.setLayout( new FillLayout() );</span>
+
+<span class="nc" id="L647">    wOptionsComp = new Composite( wOptionsSComp, SWT.NONE );</span>
+<span class="nc" id="L648">    props.setLook( wOptionsComp );</span>
+
+<span class="nc" id="L650">    FormLayout fileLayout = new FormLayout();</span>
+<span class="nc" id="L651">    fileLayout.marginWidth = 3;</span>
+<span class="nc" id="L652">    fileLayout.marginHeight = 3;</span>
+<span class="nc" id="L653">    wOptionsComp.setLayout( fileLayout );</span>
+
+<span class="nc" id="L655">    Label wlSourceStep = new Label( wOptionsComp, SWT.RIGHT );</span>
+<span class="nc" id="L656">    wlSourceStep.setText( BaseMessages.getString( PKG, &quot;MetaInjectDialog.SourceStep.Label&quot; ) );</span>
+<span class="nc" id="L657">    props.setLook( wlSourceStep );</span>
+<span class="nc" id="L658">    FormData fdlSourceStep = new FormData();</span>
+<span class="nc" id="L659">    fdlSourceStep.left = new FormAttachment( 0, 0 );</span>
+<span class="nc" id="L660">    fdlSourceStep.right = new FormAttachment( middle, 0 );</span>
+<span class="nc" id="L661">    fdlSourceStep.top = new FormAttachment( 0, 0 );</span>
+<span class="nc" id="L662">    wlSourceStep.setLayoutData( fdlSourceStep );</span>
+<span class="nc" id="L663">    wSourceStep = new CCombo( wOptionsComp, SWT.SINGLE | SWT.LEFT | SWT.BORDER );</span>
+<span class="nc" id="L664">    props.setLook( wSourceStep );</span>
+<span class="nc" id="L665">    wSourceStep.addModifyListener( lsMod );</span>
+<span class="nc" id="L666">    FormData fdSourceStep = new FormData();</span>
+<span class="nc" id="L667">    fdSourceStep.left = new FormAttachment( middle, margin );</span>
+<span class="nc" id="L668">    fdSourceStep.top = new FormAttachment( 0, 0 );</span>
+<span class="nc" id="L669">    fdSourceStep.right = new FormAttachment( 100, 0 );</span>
+<span class="nc" id="L670">    wSourceStep.setLayoutData( fdSourceStep );</span>
+<span class="nc" id="L671">    wSourceStep.addSelectionListener( new SelectionAdapter() {</span>
+      @Override
+      public void widgetSelected( SelectionEvent arg0 ) {
+<span class="nc" id="L674">        setActive();</span>
+<span class="nc" id="L675">      }</span>
+    } );
+<span class="nc" id="L677">    Control lastControl = wSourceStep;</span>
+
+<span class="nc" id="L679">    wlSourceFields = new Label( wOptionsComp, SWT.RIGHT );</span>
+<span class="nc" id="L680">    wlSourceFields.setText( BaseMessages.getString( PKG, &quot;MetaInjectDialog.Fields.Label&quot; ) );</span>
+<span class="nc" id="L681">    props.setLook( wlSourceFields );</span>
+<span class="nc" id="L682">    FormData fdlFields = new FormData();</span>
+<span class="nc" id="L683">    fdlFields.left = new FormAttachment( 0, 0 );</span>
+<span class="nc" id="L684">    fdlFields.right = new FormAttachment( middle, 0 );</span>
+<span class="nc" id="L685">    fdlFields.top = new FormAttachment( lastControl, margin );</span>
+<span class="nc" id="L686">    wlSourceFields.setLayoutData( fdlFields );</span>
+
+<span class="nc" id="L688">    final int FieldsRows = metaInjectMeta.getSourceOutputFields().size();</span>
+
+<span class="nc" id="L690">    ColumnInfo[] colinf =</span>
+      new ColumnInfo[] {
+        new ColumnInfo(
+<span class="nc" id="L693">          BaseMessages.getString( PKG, &quot;MetaInjectDialog.ColumnInfo.Fieldname&quot; ), ColumnInfo.COLUMN_TYPE_TEXT,</span>
+          false ),
+        new ColumnInfo(
+<span class="nc" id="L696">          BaseMessages.getString( PKG, &quot;MetaInjectDialog.ColumnInfo.Type&quot; ), ColumnInfo.COLUMN_TYPE_CCOMBO,</span>
+<span class="nc" id="L697">          ValueMeta.getAllTypes() ),</span>
+        new ColumnInfo(
+<span class="nc" id="L699">          BaseMessages.getString( PKG, &quot;MetaInjectDialog.ColumnInfo.Length&quot; ), ColumnInfo.COLUMN_TYPE_TEXT,</span>
+          false ),
+        new ColumnInfo(
+<span class="nc" id="L702">          BaseMessages.getString( PKG, &quot;MetaInjectDialog.ColumnInfo.Precision&quot; ), ColumnInfo.COLUMN_TYPE_TEXT,</span>
+          false ), };
+
+<span class="nc" id="L705">    wSourceFields = new TableView( transMeta, wOptionsComp,</span>
+      SWT.BORDER | SWT.FULL_SELECTION | SWT.MULTI, colinf, FieldsRows, lsMod, props );
+
+<span class="nc" id="L708">    FormData fdFields = new FormData();</span>
+<span class="nc" id="L709">    fdFields.left = new FormAttachment( middle, margin );</span>
+<span class="nc" id="L710">    fdFields.top = new FormAttachment( lastControl, margin );</span>
+<span class="nc" id="L711">    fdFields.right = new FormAttachment( 100, 0 );</span>
+<span class="nc" id="L712">    fdFields.bottom = new FormAttachment( lastControl, margin + 300 );</span>
+<span class="nc" id="L713">    wSourceFields.setLayoutData( fdFields );</span>
+<span class="nc" id="L714">    lastControl = wSourceFields;</span>
+
+<span class="nc" id="L716">    Label wlTargetFile = new Label( wOptionsComp, SWT.RIGHT );</span>
+<span class="nc" id="L717">    wlTargetFile.setText( BaseMessages.getString( PKG, &quot;MetaInjectDialog.TargetFile.Label&quot; ) );</span>
+<span class="nc" id="L718">    props.setLook( wlTargetFile );</span>
+<span class="nc" id="L719">    FormData fdlTargetFile = new FormData();</span>
+<span class="nc" id="L720">    fdlTargetFile.left = new FormAttachment( 0, 0 );</span>
+<span class="nc" id="L721">    fdlTargetFile.right = new FormAttachment( middle, 0 );</span>
+<span class="nc" id="L722">    fdlTargetFile.top = new FormAttachment( lastControl, margin );</span>
+<span class="nc" id="L723">    wlTargetFile.setLayoutData( fdlTargetFile );</span>
+<span class="nc" id="L724">    wTargetFile = new TextVar( transMeta, wOptionsComp, SWT.SINGLE | SWT.LEFT | SWT.BORDER );</span>
+<span class="nc" id="L725">    props.setLook( wTargetFile );</span>
+<span class="nc" id="L726">    wTargetFile.addModifyListener( lsMod );</span>
+<span class="nc" id="L727">    FormData fdTargetFile = new FormData();</span>
+<span class="nc" id="L728">    fdTargetFile.left = new FormAttachment( middle, margin );</span>
+<span class="nc" id="L729">    fdTargetFile.top = new FormAttachment( lastControl, margin );</span>
+<span class="nc" id="L730">    fdTargetFile.right = new FormAttachment( 100, 0 );</span>
+<span class="nc" id="L731">    wTargetFile.setLayoutData( fdTargetFile );</span>
+<span class="nc" id="L732">    lastControl = wTargetFile;</span>
+
+<span class="nc" id="L734">    Label wlNoExecution = new Label( wOptionsComp, SWT.RIGHT );</span>
+<span class="nc" id="L735">    wlNoExecution.setText( BaseMessages.getString( PKG, &quot;MetaInjectDialog.NoExecution.Label&quot; ) );</span>
+<span class="nc" id="L736">    props.setLook( wlNoExecution );</span>
+<span class="nc" id="L737">    FormData fdlNoExecution = new FormData();</span>
+<span class="nc" id="L738">    fdlNoExecution.left = new FormAttachment( 0, 0 );</span>
+<span class="nc" id="L739">    fdlNoExecution.right = new FormAttachment( middle, 0 );</span>
+<span class="nc" id="L740">    fdlNoExecution.top = new FormAttachment( lastControl, margin );</span>
+<span class="nc" id="L741">    wlNoExecution.setLayoutData( fdlNoExecution );</span>
+<span class="nc" id="L742">    wNoExecution = new Button( wOptionsComp, SWT.CHECK );</span>
+<span class="nc" id="L743">    props.setLook( wNoExecution );</span>
+<span class="nc" id="L744">    FormData fdNoExecution = new FormData();</span>
+<span class="nc" id="L745">    fdNoExecution.left = new FormAttachment( middle, margin );</span>
+<span class="nc" id="L746">    fdNoExecution.top = new FormAttachment( lastControl, margin );</span>
+<span class="nc" id="L747">    fdNoExecution.right = new FormAttachment( 100, 0 );</span>
+<span class="nc" id="L748">    wNoExecution.setLayoutData( fdNoExecution );</span>
+<span class="nc" id="L749">    lastControl = wNoExecution;</span>
+
+<span class="nc" id="L751">    wlStreamingSourceStep = new Label( wOptionsComp, SWT.RIGHT );</span>
+<span class="nc" id="L752">    wlStreamingSourceStep.setText( BaseMessages.getString( PKG, &quot;MetaInjectDialog.StreamingSourceStep.Label&quot; ) );</span>
+<span class="nc" id="L753">    props.setLook( wlStreamingSourceStep );</span>
+<span class="nc" id="L754">    FormData fdlStreamingSourceStep = new FormData();</span>
+<span class="nc" id="L755">    fdlStreamingSourceStep.left = new FormAttachment( 0, 0 );</span>
+<span class="nc" id="L756">    fdlStreamingSourceStep.right = new FormAttachment( middle, 0 );</span>
+<span class="nc" id="L757">    fdlStreamingSourceStep.top = new FormAttachment( lastControl, margin );</span>
+<span class="nc" id="L758">    wlStreamingSourceStep.setLayoutData( fdlStreamingSourceStep );</span>
+<span class="nc" id="L759">    wStreamingSourceStep = new CCombo( wOptionsComp, SWT.SINGLE | SWT.LEFT | SWT.BORDER );</span>
+<span class="nc" id="L760">    props.setLook( wStreamingSourceStep );</span>
+<span class="nc" id="L761">    FormData fdStreamingSourceStep = new FormData();</span>
+<span class="nc" id="L762">    fdStreamingSourceStep.left = new FormAttachment( middle, margin );</span>
+<span class="nc" id="L763">    fdStreamingSourceStep.top = new FormAttachment( lastControl, margin );</span>
+<span class="nc" id="L764">    fdStreamingSourceStep.right = new FormAttachment( 100, 0 );</span>
+<span class="nc" id="L765">    wStreamingSourceStep.setLayoutData( fdStreamingSourceStep );</span>
+<span class="nc" id="L766">    wStreamingSourceStep.setItems( transMeta.getStepNames() );</span>
+<span class="nc" id="L767">    wStreamingSourceStep.addSelectionListener( new SelectionAdapter() {</span>
+      @Override
+      public void widgetSelected( SelectionEvent arg0 ) {
+<span class="nc" id="L770">        setActive();</span>
+<span class="nc" id="L771">      }</span>
+    } );
+<span class="nc" id="L773">    lastControl = wStreamingSourceStep;</span>
+
+<span class="nc" id="L775">    wlStreamingTargetStep = new Label( wOptionsComp, SWT.RIGHT );</span>
+<span class="nc" id="L776">    wlStreamingTargetStep.setText( BaseMessages.getString( PKG, &quot;MetaInjectDialog.StreamingTargetStep.Label&quot; ) );</span>
+<span class="nc" id="L777">    props.setLook( wlStreamingTargetStep );</span>
+<span class="nc" id="L778">    FormData fdlStreamingTargetStep = new FormData();</span>
+<span class="nc" id="L779">    fdlStreamingTargetStep.left = new FormAttachment( 0, 0 );</span>
+<span class="nc" id="L780">    fdlStreamingTargetStep.right = new FormAttachment( middle, 0 );</span>
+<span class="nc" id="L781">    fdlStreamingTargetStep.top = new FormAttachment( lastControl, margin );</span>
+<span class="nc" id="L782">    wlStreamingTargetStep.setLayoutData( fdlStreamingTargetStep );</span>
+<span class="nc" id="L783">    wStreamingTargetStep = new CCombo( wOptionsComp, SWT.SINGLE | SWT.LEFT | SWT.BORDER );</span>
+<span class="nc" id="L784">    props.setLook( wStreamingTargetStep );</span>
+<span class="nc" id="L785">    FormData fdStreamingTargetStep = new FormData();</span>
+<span class="nc" id="L786">    fdStreamingTargetStep.left = new FormAttachment( middle, margin );</span>
+<span class="nc" id="L787">    fdStreamingTargetStep.top = new FormAttachment( lastControl, margin );</span>
+<span class="nc" id="L788">    fdStreamingTargetStep.right = new FormAttachment( 100, 0 );</span>
+<span class="nc" id="L789">    wStreamingTargetStep.setLayoutData( fdStreamingTargetStep );</span>
+<span class="nc" id="L790">    lastControl = wStreamingTargetStep;</span>
+
+<span class="nc" id="L792">    FormData fdOptionsComp = new FormData();</span>
+<span class="nc" id="L793">    fdOptionsComp.left = new FormAttachment( 0, 0 );</span>
+<span class="nc" id="L794">    fdOptionsComp.top = new FormAttachment( 0, 0 );</span>
+<span class="nc" id="L795">    fdOptionsComp.right = new FormAttachment( 100, 0 );</span>
+<span class="nc" id="L796">    fdOptionsComp.bottom = new FormAttachment( 100, 0 );</span>
+<span class="nc" id="L797">    wOptionsComp.setLayoutData( fdOptionsComp );</span>
+
+<span class="nc" id="L799">    wOptionsComp.pack();</span>
+<span class="nc" id="L800">    Rectangle bounds = wOptionsComp.getBounds();</span>
+
+<span class="nc" id="L802">    wOptionsSComp.setContent( wOptionsComp );</span>
+<span class="nc" id="L803">    wOptionsSComp.setExpandHorizontal( true );</span>
+<span class="nc" id="L804">    wOptionsSComp.setExpandVertical( true );</span>
+<span class="nc" id="L805">    wOptionsSComp.setMinWidth( bounds.width );</span>
+<span class="nc" id="L806">    wOptionsSComp.setMinHeight( bounds.height );</span>
+
+<span class="nc" id="L808">    wOptionsTab.setControl( wOptionsSComp );</span>
+
+    // ///////////////////////////////////////////////////////////
+    // / END OF OPTIONS TAB
+    // ///////////////////////////////////////////////////////////
+<span class="nc" id="L813">  }</span>
+
+  private void addInjectTab() {
+    // ////////////////////////
+    // START OF INJECT TAB ///
+    // ////////////////////////
+
+<span class="nc" id="L820">    wInjectTab = new CTabItem( wTabFolder, SWT.NONE );</span>
+<span class="nc" id="L821">    wInjectTab.setText( BaseMessages.getString( PKG, &quot;MetaInjectDialog.InjectTab.TabTitle&quot; ) );</span>
+
+<span class="nc" id="L823">    wInjectSComp = new ScrolledComposite( wTabFolder, SWT.V_SCROLL | SWT.H_SCROLL );</span>
+<span class="nc" id="L824">    wInjectSComp.setLayout( new FillLayout() );</span>
+
+<span class="nc" id="L826">    wInjectComp = new Composite( wInjectSComp, SWT.NONE );</span>
+<span class="nc" id="L827">    props.setLook( wInjectComp );</span>
+
+<span class="nc" id="L829">    FormLayout fileLayout = new FormLayout();</span>
+<span class="nc" id="L830">    fileLayout.marginWidth = 3;</span>
+<span class="nc" id="L831">    fileLayout.marginHeight = 3;</span>
+<span class="nc" id="L832">    wInjectComp.setLayout( fileLayout );</span>
+
+<span class="nc" id="L834">    wTree = new Tree( wInjectComp, SWT.SINGLE | SWT.FULL_SELECTION | SWT.V_SCROLL | SWT.H_SCROLL | SWT.BORDER );</span>
+<span class="nc" id="L835">    FormData fdTree = new FormData();</span>
+<span class="nc" id="L836">    fdTree.left = new FormAttachment( 0, 0 );</span>
+<span class="nc" id="L837">    fdTree.top = new FormAttachment( 0, 0 );</span>
+<span class="nc" id="L838">    fdTree.right = new FormAttachment( 100, 0 );</span>
+<span class="nc" id="L839">    fdTree.bottom = new FormAttachment( 100, 0 );</span>
+<span class="nc" id="L840">    wTree.setLayoutData( fdTree );</span>
+
+<span class="nc" id="L842">    ColumnInfo[] colinf =</span>
+      new ColumnInfo[] {
+        new ColumnInfo(
+<span class="nc" id="L845">          BaseMessages.getString( PKG, &quot;MetaInjectDialog.Column.TargetStep&quot; ), ColumnInfo.COLUMN_TYPE_TEXT,</span>
+          false, true ),
+        new ColumnInfo(
+<span class="nc" id="L848">          BaseMessages.getString( PKG, &quot;MetaInjectDialog.Column.TargetDescription&quot; ),</span>
+          ColumnInfo.COLUMN_TYPE_TEXT, false, true ),
+        new ColumnInfo(
+<span class="nc" id="L851">          BaseMessages.getString( PKG, &quot;MetaInjectDialog.Column.SourceStep&quot; ),</span>
+          ColumnInfo.COLUMN_TYPE_CCOMBO, false, true ),
+        new ColumnInfo(
+<span class="nc" id="L854">          BaseMessages.getString( PKG, &quot;MetaInjectDialog.Column.SourceField&quot; ),</span>
+          ColumnInfo.COLUMN_TYPE_CCOMBO, false, true ), };
+
+<span class="nc" id="L857">    wTree.setHeaderVisible( true );</span>
+<span class="nc bnc" id="L858" title="All 2 branches missed.">    for ( int i = 0; i &lt; colinf.length; i++ ) {</span>
+<span class="nc" id="L859">      ColumnInfo columnInfo = colinf[i];</span>
+<span class="nc" id="L860">      TreeColumn treeColumn = new TreeColumn( wTree, columnInfo.getAllignement() );</span>
+<span class="nc" id="L861">      treeColumn.setText( columnInfo.getName() );</span>
+<span class="nc" id="L862">      treeColumn.setWidth( 200 );</span>
+    }
+
+<span class="nc" id="L865">    wTree.addListener( SWT.MouseDown, new Listener() {</span>
+      public void handleEvent( Event event ) {
+        try {
+<span class="nc" id="L868">          Point point = new Point( event.x, event.y );</span>
+<span class="nc" id="L869">          TreeItem item = wTree.getItem( point );</span>
+<span class="nc bnc" id="L870" title="All 2 branches missed.">          if ( item != null ) {</span>
+<span class="nc" id="L871">            TargetStepAttribute target = treeItemTargetMap.get( item );</span>
+<span class="nc bnc" id="L872" title="All 2 branches missed.">            if ( target != null ) {</span>
+<span class="nc" id="L873">              SourceStepField source = targetSourceMapping.get( target );</span>
+
+<span class="nc" id="L875">              String[] prevStepNames = transMeta.getPrevStepNames( stepMeta );</span>
+<span class="nc" id="L876">              Arrays.sort( prevStepNames );</span>
+
+<span class="nc" id="L878">              Map&lt;String, SourceStepField&gt; fieldMap = new HashMap&lt;String, SourceStepField&gt;();</span>
+<span class="nc bnc" id="L879" title="All 2 branches missed.">              for ( String prevStepName : prevStepNames ) {</span>
+<span class="nc" id="L880">                RowMetaInterface fields = transMeta.getStepFields( prevStepName );</span>
+<span class="nc bnc" id="L881" title="All 2 branches missed.">                for ( ValueMetaInterface field : fields.getValueMetaList() ) {</span>
+<span class="nc" id="L882">                  String key = buildStepFieldKey( prevStepName, field.getName() );</span>
+<span class="nc" id="L883">                  fieldMap.put( key, new SourceStepField( prevStepName, field.getName() ) );</span>
+<span class="nc" id="L884">                }</span>
+              }
+<span class="nc" id="L886">              String[] sourceFields = fieldMap.keySet().toArray( new String[fieldMap.size()] );</span>
+<span class="nc" id="L887">              Arrays.sort( sourceFields );</span>
+
+<span class="nc" id="L889">              EnterSelectionDialog selectSourceField =</span>
+                new EnterSelectionDialog(
+<span class="nc" id="L891">                  shell, sourceFields, &quot;Select source field&quot;, &quot;Select the source field (cancel=clear)&quot; );</span>
+<span class="nc bnc" id="L892" title="All 4 branches missed.">              if ( source != null &amp;&amp; !Const.isEmpty( source.getStepname() ) ) {</span>
+<span class="nc" id="L893">                String key = buildStepFieldKey( source.getStepname(), source.getField() );</span>
+<span class="nc" id="L894">                int index = Const.indexOfString( key, sourceFields );</span>
+<span class="nc bnc" id="L895" title="All 2 branches missed.">                if ( index &gt;= 0 ) {</span>
+<span class="nc" id="L896">                  selectSourceField.setSelectedNrs( new int[] { index, } );</span>
+                }
+              }
+<span class="nc" id="L899">              String selectedStepField = selectSourceField.open();</span>
+<span class="nc bnc" id="L900" title="All 2 branches missed.">              if ( selectedStepField != null ) {</span>
+<span class="nc" id="L901">                SourceStepField newSource = fieldMap.get( selectedStepField );</span>
+<span class="nc" id="L902">                item.setText( 2, newSource.getStepname() );</span>
+<span class="nc" id="L903">                item.setText( 3, newSource.getField() );</span>
+<span class="nc" id="L904">                targetSourceMapping.put( target, newSource );</span>
+<span class="nc" id="L905">              } else {</span>
+<span class="nc" id="L906">                item.setText( 2, &quot;&quot; );</span>
+<span class="nc" id="L907">                item.setText( 3, &quot;&quot; );</span>
+<span class="nc" id="L908">                targetSourceMapping.remove( target );</span>
+              }
+
+              /*
+               * EnterSelectionDialog selectStep = new EnterSelectionDialog(shell, prevStepNames, &quot;Select source step&quot;,
+               * &quot;Select the source step&quot;); if (source!=null &amp;&amp; !Const.isEmpty(source.getStepname())) { int index =
+               * Const.indexOfString(source.getStepname(), prevStepNames); if (index&gt;=0) { selectStep.setSelectedNrs(new
+               * int[] {index,}); } } String prevStep = selectStep.open(); if (prevStep!=null) { // OK, now we list the
+               * fields from that step... // RowMetaInterface fields = transMeta.getStepFields(prevStep); String[]
+               * fieldNames = fields.getFieldNames(); Arrays.sort(fieldNames); EnterSelectionDialog selectField = new
+               * EnterSelectionDialog(shell, fieldNames, &quot;Select field&quot;, &quot;Select the source field&quot;); if (source!=null &amp;&amp;
+               * !Const.isEmpty(source.getField())) { int index = Const.indexOfString(source.getField(), fieldNames); if
+               * (index&gt;=0) { selectField.setSelectedNrs(new int[] {index,}); } } String fieldName = selectField.open();
+               * if (fieldName!=null) { // Store the selection, update the UI... // item.setText(2, prevStep);
+               * item.setText(3, fieldName); source = new SourceStepField(prevStep, fieldName);
+               * targetSourceMapping.put(target, source); } } else { item.setText(2, &quot;&quot;); item.setText(3, &quot;&quot;);
+               * targetSourceMapping.remove(target); }
+               */
+            }
+
+          }
+<span class="nc" id="L929">        } catch ( Exception e ) {</span>
+<span class="nc" id="L930">          new ErrorDialog( shell, &quot;Oops&quot;, &quot;Unexpected Error&quot;, e );</span>
+<span class="nc" id="L931">        }</span>
+<span class="nc" id="L932">      }</span>
+    } );
+
+<span class="nc" id="L935">    FormData fdInjectComp = new FormData();</span>
+<span class="nc" id="L936">    fdInjectComp.left = new FormAttachment( 0, 0 );</span>
+<span class="nc" id="L937">    fdInjectComp.top = new FormAttachment( 0, 0 );</span>
+<span class="nc" id="L938">    fdInjectComp.right = new FormAttachment( 100, 0 );</span>
+<span class="nc" id="L939">    fdInjectComp.bottom = new FormAttachment( 100, 0 );</span>
+<span class="nc" id="L940">    wInjectComp.setLayoutData( fdInjectComp );</span>
+
+<span class="nc" id="L942">    wInjectComp.pack();</span>
+<span class="nc" id="L943">    Rectangle bounds = wInjectComp.getBounds();</span>
+
+<span class="nc" id="L945">    wInjectSComp.setContent( wInjectComp );</span>
+<span class="nc" id="L946">    wInjectSComp.setExpandHorizontal( true );</span>
+<span class="nc" id="L947">    wInjectSComp.setExpandVertical( true );</span>
+<span class="nc" id="L948">    wInjectSComp.setMinWidth( bounds.width );</span>
+<span class="nc" id="L949">    wInjectSComp.setMinHeight( bounds.height );</span>
+
+<span class="nc" id="L951">    wInjectTab.setControl( wInjectSComp );</span>
+
+    // ///////////////////////////////////////////////////////////
+    // / END OF INJECT TAB
+    // ///////////////////////////////////////////////////////////
+<span class="nc" id="L956">  }</span>
+
+  protected void selectTransformationByReference() {
+<span class="nc bnc" id="L959" title="All 2 branches missed.">    if ( repository != null ) {</span>
+<span class="nc" id="L960">      SelectObjectDialog sod = new SelectObjectDialog( shell, repository, true, false );</span>
+<span class="nc" id="L961">      sod.open();</span>
+<span class="nc" id="L962">      RepositoryElementMetaInterface repositoryObject = sod.getRepositoryObject();</span>
+<span class="nc bnc" id="L963" title="All 2 branches missed.">      if ( repositoryObject != null ) {</span>
+<span class="nc" id="L964">        specificationMethod = ObjectLocationSpecificationMethod.REPOSITORY_BY_REFERENCE;</span>
+<span class="nc" id="L965">        getByReferenceData( repositoryObject );</span>
+<span class="nc" id="L966">        referenceObjectId = repositoryObject.getObjectId();</span>
+<span class="nc" id="L967">        setRadioButtons();</span>
+      }
+    }
+<span class="nc" id="L970">  }</span>
+
+  private void selectRepositoryTrans() {
+    try {
+<span class="nc" id="L974">      SelectObjectDialog sod = new SelectObjectDialog( shell, repository );</span>
+<span class="nc" id="L975">      String transName = sod.open();</span>
+<span class="nc" id="L976">      RepositoryDirectoryInterface repdir = sod.getDirectory();</span>
+<span class="nc bnc" id="L977" title="All 4 branches missed.">      if ( transName != null &amp;&amp; repdir != null ) {</span>
+<span class="nc" id="L978">        loadRepositoryTrans( transName, repdir );</span>
+<span class="nc" id="L979">        wFilename.setText( &quot;&quot; );</span>
+<span class="nc" id="L980">        wTransname.setText( injectTransMeta.getName() );</span>
+<span class="nc" id="L981">        wDirectory.setText( injectTransMeta.getRepositoryDirectory().getPath() );</span>
+<span class="nc" id="L982">        radioByName.setSelection( true );</span>
+<span class="nc" id="L983">        radioFilename.setSelection( false );</span>
+<span class="nc" id="L984">        validateTrans();</span>
+      }
+<span class="nc" id="L986">    } catch ( KettleException ke ) {</span>
+<span class="nc" id="L987">      new ErrorDialog(</span>
+<span class="nc" id="L988">        shell, BaseMessages.getString( PKG, &quot;MetaInjectDialog.ErrorSelectingObject.DialogTitle&quot; ), BaseMessages</span>
+<span class="nc" id="L989">          .getString( PKG, &quot;MetaInjectDialog.ErrorSelectingObject.DialogMessage&quot; ), ke );</span>
+<span class="nc" id="L990">    }</span>
+<span class="nc" id="L991">  }</span>
+
+  private void loadRepositoryTrans( String transName, RepositoryDirectoryInterface repdir ) throws KettleException {
+    // Read the transformation...
+    //
+<span class="nc" id="L996">    injectTransMeta = repository.loadTransformation(</span>
+<span class="nc" id="L997">      transMeta.environmentSubstitute( transName ), repdir, null, true, null );</span>
+<span class="nc" id="L998">    injectTransMeta.clearChanged();</span>
+<span class="nc" id="L999">  }</span>
+
+  private void selectFileTrans( boolean useVfs ) {
+<span class="nc" id="L1002">    String curFile = wFilename.getText();</span>
+
+<span class="nc bnc" id="L1004" title="All 2 branches missed.">    if ( useVfs ) {</span>
+<span class="nc" id="L1005">      FileObject root = null;</span>
+
+      try {
+<span class="nc bnc" id="L1008" title="All 2 branches missed.">        root = KettleVFS.getFileObject( curFile != null ? curFile : Const.getUserHomeDirectory() );</span>
+
+<span class="nc" id="L1010">        VfsFileChooserDialog vfsFileChooser = Spoon.getInstance().getVfsFileChooserDialog( root.getParent(), root );</span>
+<span class="nc" id="L1011">        FileObject file =</span>
+<span class="nc" id="L1012">          vfsFileChooser.open(</span>
+<span class="nc" id="L1013">            shell, null, Const.STRING_TRANS_FILTER_EXT, Const.getTransformationFilterNames(),</span>
+            VfsFileChooserDialog.VFS_DIALOG_OPEN_FILE );
+<span class="nc bnc" id="L1015" title="All 2 branches missed.">        if ( file == null ) {</span>
+<span class="nc" id="L1016">          return;</span>
+        }
+<span class="nc" id="L1018">        String fname = null;</span>
+
+<span class="nc" id="L1020">        fname = file.getURL().getFile();</span>
+
+<span class="nc bnc" id="L1022" title="All 2 branches missed.">        if ( fname != null ) {</span>
+
+<span class="nc" id="L1024">          loadFileTrans( fname );</span>
+<span class="nc" id="L1025">          wFilename.setText( injectTransMeta.getFilename() );</span>
+<span class="nc" id="L1026">          wTransname.setText( Const.NVL( injectTransMeta.getName(), &quot;&quot; ) );</span>
+<span class="nc" id="L1027">          wDirectory.setText( &quot;&quot; );</span>
+<span class="nc" id="L1028">          specificationMethod = ObjectLocationSpecificationMethod.FILENAME;</span>
+<span class="nc" id="L1029">          setRadioButtons();</span>
+        }
+<span class="nc" id="L1031">      } catch ( IOException e ) {</span>
+<span class="nc" id="L1032">        new ErrorDialog( shell,</span>
+<span class="nc" id="L1033">          BaseMessages.getString( PKG, &quot;MetaInjectDialog.ErrorLoadingTransformation.DialogTitle&quot; ),</span>
+<span class="nc" id="L1034">          BaseMessages.getString( PKG, &quot;MetaInjectDialog.ErrorLoadingTransformation.DialogMessage&quot; ), e );</span>
+<span class="nc" id="L1035">      } catch ( KettleException e ) {</span>
+<span class="nc" id="L1036">        new ErrorDialog( shell,</span>
+<span class="nc" id="L1037">          BaseMessages.getString( PKG, &quot;MetaInjectDialog.ErrorLoadingTransformation.DialogTitle&quot; ),</span>
+<span class="nc" id="L1038">          BaseMessages.getString( PKG, &quot;MetaInjectDialog.ErrorLoadingTransformation.DialogMessage&quot; ), e );</span>
+<span class="nc" id="L1039">      }</span>
+    }
+
+    // else: Local file open dialog, ask for .ktr &amp; xml files...
+
+<span class="nc" id="L1044">  }</span>
+
+  private void loadFileTrans( String fname ) throws KettleException {
+<span class="nc" id="L1047">    injectTransMeta = new TransMeta( transMeta.environmentSubstitute( fname ) );</span>
+<span class="nc" id="L1048">    injectTransMeta.clearChanged();</span>
+<span class="nc" id="L1049">  }</span>
+
+  private void editTrans() {
+    // Load the transformation again to make sure it's still there and
+    // refreshed
+    // It's an extra check to make sure it's still OK...
+    //
+    try {
+<span class="nc" id="L1057">      loadTransformation();</span>
+
+      // If we're still here, mappingTransMeta is valid.
+      //
+<span class="nc" id="L1061">      SpoonInterface spoon = SpoonFactory.getInstance();</span>
+<span class="nc bnc" id="L1062" title="All 2 branches missed.">      if ( spoon != null ) {</span>
+<span class="nc" id="L1063">        spoon.addTransGraph( injectTransMeta );</span>
+      }
+<span class="nc" id="L1065">    } catch ( KettleException e ) {</span>
+<span class="nc" id="L1066">      new ErrorDialog(</span>
+<span class="nc" id="L1067">        shell, BaseMessages.getString( PKG, &quot;MetaInjectDialog.ErrorShowingTransformation.Title&quot; ), BaseMessages</span>
+<span class="nc" id="L1068">          .getString( PKG, &quot;MetaInjectDialog.ErrorShowingTransformation.Message&quot; ), e );</span>
+<span class="nc" id="L1069">    }</span>
+<span class="nc" id="L1070">  }</span>
+
+  /**
+   * validate the transformation specified and refresh UI information
+   */
+  private void validateTrans() {
+    try {
+<span class="nc" id="L1077">      loadTransformation();</span>
+<span class="nc" id="L1078">      refreshTree();</span>
+<span class="nc" id="L1079">    } catch ( KettleException e ) {</span>
+<span class="nc" id="L1080">      new ErrorDialog(</span>
+<span class="nc" id="L1081">        shell, BaseMessages.getString( PKG, &quot;MetaInjectDialog.ErrorValidatingTransformation.Title&quot; ),</span>
+<span class="nc" id="L1082">        BaseMessages.getString( PKG, &quot;MetaInjectDialog.ErrorValidatingTransformation.Message&quot; ), e );</span>
+<span class="nc" id="L1083">    }</span>
+<span class="nc" id="L1084">  }</span>
+
+  private void loadTransformation() throws KettleException {
+<span class="nc bnc" id="L1087" title="All 4 branches missed.">    switch ( specificationMethod ) {</span>
+      case FILENAME:
+<span class="nc" id="L1089">        loadFileTrans( wFilename.getText() );</span>
+<span class="nc" id="L1090">        break;</span>
+      case REPOSITORY_BY_NAME:
+<span class="nc" id="L1092">        String realDirectory = transMeta.environmentSubstitute( wDirectory.getText() );</span>
+<span class="nc" id="L1093">        String realTransname = transMeta.environmentSubstitute( wTransname.getText() );</span>
+
+<span class="nc bnc" id="L1095" title="All 4 branches missed.">        if ( Const.isEmpty( realDirectory ) || Const.isEmpty( realTransname ) ) {</span>
+<span class="nc" id="L1096">          throw new KettleException( BaseMessages.getString(</span>
+            PKG, &quot;MetaInjectDialog.Exception.NoValidMappingDetailsFound&quot; ) );
+        }
+<span class="nc" id="L1099">        RepositoryDirectoryInterface repdir = repository.findDirectory( realDirectory );</span>
+<span class="nc bnc" id="L1100" title="All 2 branches missed.">        if ( repdir == null ) {</span>
+<span class="nc" id="L1101">          throw new KettleException( BaseMessages.getString(</span>
+            PKG, &quot;MetaInjectDialog.Exception.UnableToFindRepositoryDirectory)&quot; ) );
+        }
+<span class="nc" id="L1104">        loadRepositoryTrans( realTransname, repdir );</span>
+<span class="nc" id="L1105">        break;</span>
+      case REPOSITORY_BY_REFERENCE:
+<span class="nc" id="L1107">        injectTransMeta = repository.loadTransformation( referenceObjectId, null ); // load the last version</span>
+<span class="nc" id="L1108">        injectTransMeta.clearChanged();</span>
+<span class="nc" id="L1109">        break;</span>
+      default:
+        break;
+    }
+<span class="nc" id="L1113">  }</span>
+
+  public void setActive() {
+<span class="nc bnc" id="L1116" title="All 2 branches missed.">    boolean supportsReferences =</span>
+<span class="nc bnc" id="L1117" title="All 2 branches missed.">      repository != null &amp;&amp; repository.getRepositoryMeta().getRepositoryCapabilities().supportsReferences();</span>
+
+<span class="nc bnc" id="L1119" title="All 2 branches missed.">    radioByName.setEnabled( repository != null );</span>
+<span class="nc bnc" id="L1120" title="All 4 branches missed.">    radioByReference.setEnabled( repository != null &amp;&amp; supportsReferences );</span>
+<span class="nc" id="L1121">    wFilename.setEnabled( radioFilename.getSelection() );</span>
+<span class="nc bnc" id="L1122" title="All 4 branches missed.">    wTransname.setEnabled( repository != null &amp;&amp; radioByName.getSelection() );</span>
+
+<span class="nc bnc" id="L1124" title="All 4 branches missed.">    wDirectory.setEnabled( repository != null &amp;&amp; radioByName.getSelection() );</span>
+
+<span class="nc bnc" id="L1126" title="All 4 branches missed.">    wbTrans.setEnabled( repository != null &amp;&amp; radioByName.getSelection() );</span>
+
+<span class="nc bnc" id="L1128" title="All 6 branches missed.">    wByReference.setEnabled( repository != null &amp;&amp; radioByReference.getSelection() &amp;&amp; supportsReferences );</span>
+<span class="nc bnc" id="L1129" title="All 6 branches missed.">    wbByReference.setEnabled( repository != null &amp;&amp; radioByReference.getSelection() &amp;&amp; supportsReferences );</span>
+
+<span class="nc bnc" id="L1131" title="All 2 branches missed.">    boolean outputCapture = !Const.isEmpty( wSourceStep.getText() );</span>
+<span class="nc" id="L1132">    wlSourceFields.setEnabled( outputCapture );</span>
+<span class="nc" id="L1133">    wSourceFields.setEnabled( outputCapture );</span>
+
+<span class="nc bnc" id="L1135" title="All 2 branches missed.">    boolean streaming = !Const.isEmpty( wStreamingSourceStep.getText() );</span>
+<span class="nc" id="L1136">    wStreamingTargetStep.setEnabled( streaming );</span>
+<span class="nc" id="L1137">    wlStreamingTargetStep.setEnabled( streaming );</span>
+<span class="nc" id="L1138">  }</span>
+
+  protected void setRadioButtons() {
+<span class="nc bnc" id="L1141" title="All 2 branches missed.">    radioFilename.setSelection( specificationMethod == ObjectLocationSpecificationMethod.FILENAME );</span>
+<span class="nc bnc" id="L1142" title="All 2 branches missed.">    radioByName.setSelection( specificationMethod == ObjectLocationSpecificationMethod.REPOSITORY_BY_NAME );</span>
+<span class="nc bnc" id="L1143" title="All 2 branches missed.">    radioByReference</span>
+<span class="nc" id="L1144">      .setSelection( specificationMethod == ObjectLocationSpecificationMethod.REPOSITORY_BY_REFERENCE );</span>
+<span class="nc" id="L1145">    setActive();</span>
+<span class="nc" id="L1146">  }</span>
+
+  private void getByReferenceData( RepositoryElementMetaInterface transInf ) {
+<span class="nc" id="L1149">    String path = transInf.getRepositoryDirectory().getPath();</span>
+<span class="nc bnc" id="L1150" title="All 2 branches missed.">    if ( !path.endsWith( &quot;/&quot; ) ) {</span>
+<span class="nc" id="L1151">      path += &quot;/&quot;;</span>
+    }
+<span class="nc" id="L1153">    path += transInf.getName();</span>
+<span class="nc" id="L1154">    wByReference.setText( path );</span>
+<span class="nc" id="L1155">  }</span>
+
+  /**
+   * Copy information from the meta-data input to the dialog fields.
+   */
+  public void getData() {
+<span class="nc" id="L1161">    specificationMethod = metaInjectMeta.getSpecificationMethod();</span>
+<span class="nc bnc" id="L1162" title="All 4 branches missed.">    switch ( specificationMethod ) {</span>
+      case FILENAME:
+<span class="nc" id="L1164">        wFilename.setText( Const.NVL( metaInjectMeta.getFileName(), &quot;&quot; ) );</span>
+<span class="nc" id="L1165">        break;</span>
+      case REPOSITORY_BY_NAME:
+<span class="nc" id="L1167">        wDirectory.setText( Const.NVL( metaInjectMeta.getDirectoryPath(), &quot;&quot; ) );</span>
+<span class="nc" id="L1168">        wTransname.setText( Const.NVL( metaInjectMeta.getTransName(), &quot;&quot; ) );</span>
+<span class="nc" id="L1169">        break;</span>
+      case REPOSITORY_BY_REFERENCE:
+<span class="nc" id="L1171">        referenceObjectId = metaInjectMeta.getTransObjectId();</span>
+<span class="nc" id="L1172">        wByReference.setText( &quot;&quot; );</span>
+        try {
+<span class="nc" id="L1174">          RepositoryObject transInf =</span>
+<span class="nc" id="L1175">            repository.getObjectInformation(</span>
+<span class="nc" id="L1176">              metaInjectMeta.getTransObjectId(), RepositoryObjectType.TRANSFORMATION );</span>
+<span class="nc bnc" id="L1177" title="All 2 branches missed.">          if ( transInf != null ) {</span>
+<span class="nc" id="L1178">            getByReferenceData( transInf );</span>
+          }
+<span class="nc" id="L1180">        } catch ( KettleException e ) {</span>
+<span class="nc" id="L1181">          new ErrorDialog( shell,</span>
+<span class="nc" id="L1182">            BaseMessages.getString( PKG, &quot;MetaInjectDialog.Exception.UnableToReferenceObjectId.Title&quot; ),</span>
+<span class="nc" id="L1183">            BaseMessages.getString( PKG, &quot;MetaInjectDialog.Exception.UnableToReferenceObjectId.Message&quot; ), e );</span>
+<span class="nc" id="L1184">        }</span>
+<span class="nc" id="L1185">        break;</span>
+      default:
+        break;
+    }
+
+<span class="nc" id="L1190">    wSourceStep.setText( Const.NVL( metaInjectMeta.getSourceStepName(), &quot;&quot; ) );</span>
+<span class="nc" id="L1191">    int rownr = 0;</span>
+<span class="nc bnc" id="L1192" title="All 2 branches missed.">    for ( MetaInjectOutputField field : metaInjectMeta.getSourceOutputFields() ) {</span>
+<span class="nc" id="L1193">      int colnr = 1;</span>
+<span class="nc" id="L1194">      wSourceFields.setText( field.getName(), colnr++, rownr );</span>
+<span class="nc" id="L1195">      wSourceFields.setText( field.getTypeDescription(), colnr++, rownr );</span>
+<span class="nc bnc" id="L1196" title="All 2 branches missed.">      wSourceFields.setText( field.getLength() &lt; 0 ? &quot;&quot; : Integer.toString( field.getLength() ), colnr++, rownr );</span>
+<span class="nc bnc" id="L1197" title="All 2 branches missed.">      wSourceFields.setText( field.getPrecision() &lt; 0 ? &quot;&quot; : Integer.toString( field.getPrecision() ), colnr++, rownr );</span>
+<span class="nc" id="L1198">      rownr++;</span>
+<span class="nc" id="L1199">    }</span>
+
+<span class="nc" id="L1201">    wTargetFile.setText( Const.NVL( metaInjectMeta.getTargetFile(), &quot;&quot; ) );</span>
+<span class="nc" id="L1202">    wNoExecution.setSelection( metaInjectMeta.isNoExecution() );</span>
+
+<span class="nc" id="L1204">    wStreamingSourceStep.setText( Const.NVL(</span>
+<span class="nc bnc" id="L1205" title="All 2 branches missed.">      metaInjectMeta.getStreamSourceStep() == null ? null : metaInjectMeta.getStreamSourceStep().getName(), &quot;&quot; ) );</span>
+<span class="nc" id="L1206">    wStreamingTargetStep.setText( Const.NVL( metaInjectMeta.getStreamTargetStepname(), &quot;&quot; ) );</span>
+
+<span class="nc" id="L1208">    setRadioButtons();</span>
+
+<span class="nc" id="L1210">    refreshTree();</span>
+
+<span class="nc" id="L1212">    wTabFolder.setSelection( 0 );</span>
+
+<span class="nc" id="L1214">    wStepname.selectAll();</span>
+<span class="nc" id="L1215">    wStepname.setFocus();</span>
+<span class="nc" id="L1216">  }</span>
+
+  protected String buildStepFieldKey( String stepname, String field ) {
+<span class="nc" id="L1219">    return stepname + &quot; : &quot; + field;</span>
+  }
+
+  private void refreshTree() {
+    try {
+<span class="nc" id="L1224">      loadTransformation();</span>
+
+<span class="nc" id="L1226">      treeItemTargetMap = new HashMap&lt;TreeItem, TargetStepAttribute&gt;();</span>
+
+<span class="nc" id="L1228">      wTree.removeAll();</span>
+
+<span class="nc" id="L1230">      TreeItem transItem = new TreeItem( wTree, SWT.NONE );</span>
+<span class="nc" id="L1231">      transItem.setExpanded( true );</span>
+<span class="nc" id="L1232">      transItem.setText( injectTransMeta.getName() );</span>
+<span class="nc" id="L1233">      List&lt;StepMeta&gt; injectSteps = new ArrayList&lt;StepMeta&gt;();</span>
+<span class="nc bnc" id="L1234" title="All 2 branches missed.">      for ( StepMeta stepMeta : injectTransMeta.getUsedSteps() ) {</span>
+<span class="nc" id="L1235">        StepMetaInterface meta = stepMeta.getStepMetaInterface();</span>
+<span class="nc bnc" id="L1236" title="All 4 branches missed.">        if ( meta.getStepMetaInjectionInterface() != null || BeanInjectionInfo.isInjectionSupported( meta.getClass() ) ) {</span>
+<span class="nc" id="L1237">          injectSteps.add( stepMeta );</span>
+        }
+<span class="nc" id="L1239">      }</span>
+<span class="nc" id="L1240">      Collections.sort( injectSteps );</span>
+
+<span class="nc bnc" id="L1242" title="All 2 branches missed.">      for ( StepMeta stepMeta : injectSteps ) {</span>
+<span class="nc" id="L1243">        TreeItem stepItem = new TreeItem( transItem, SWT.NONE );</span>
+<span class="nc" id="L1244">        stepItem.setText( stepMeta.getName() );</span>
+<span class="nc" id="L1245">        stepItem.setExpanded( true );</span>
+
+        // For each step, add the keys
+        //
+<span class="nc" id="L1249">        StepMetaInterface metaInterface = stepMeta.getStepMetaInterface();</span>
+<span class="nc bnc" id="L1250" title="All 2 branches missed.">        if ( BeanInjectionInfo.isInjectionSupported( metaInterface.getClass() ) ) {</span>
+<span class="nc" id="L1251">          processNewMDIDescription( stepMeta, stepItem, metaInterface );</span>
+        } else {
+<span class="nc" id="L1253">          processOldMDIDescription( stepMeta, stepItem, metaInterface.getStepMetaInjectionInterface() );</span>
+        }
+<span class="nc" id="L1255">      }</span>
+
+<span class="nc" id="L1257">    } catch ( Throwable t ) {</span>
+      // Ignore errors
+<span class="nc" id="L1259">    }</span>
+
+<span class="nc bnc" id="L1261" title="All 2 branches missed.">    for ( TreeItem item : wTree.getItems() ) {</span>
+<span class="nc" id="L1262">      expandItemAndChildren( item );</span>
+    }
+
+    // Also set the source step combo values
+    //
+<span class="nc bnc" id="L1267" title="All 2 branches missed.">    if ( injectTransMeta != null ) {</span>
+<span class="nc" id="L1268">      String[] sourceSteps = injectTransMeta.getStepNames();</span>
+<span class="nc" id="L1269">      Arrays.sort( sourceSteps );</span>
+<span class="nc" id="L1270">      wSourceStep.setItems( sourceSteps );</span>
+<span class="nc" id="L1271">      wStreamingTargetStep.setItems( sourceSteps );</span>
+    }
+<span class="nc" id="L1273">  }</span>
+
+  private void processOldMDIDescription( StepMeta stepMeta, TreeItem stepItem, StepMetaInjectionInterface injection )
+    throws KettleException {
+<span class="nc" id="L1277">    List&lt;StepInjectionMetaEntry&gt; entries = injection.getStepInjectionMetadataEntries();</span>
+<span class="nc bnc" id="L1278" title="All 2 branches missed.">    for ( final StepInjectionMetaEntry entry : entries ) {</span>
+<span class="nc bnc" id="L1279" title="All 2 branches missed.">      if ( entry.getValueType() != ValueMetaInterface.TYPE_NONE ) {</span>
+<span class="nc" id="L1280">        TreeItem entryItem = new TreeItem( stepItem, SWT.NONE );</span>
+<span class="nc" id="L1281">        entryItem.setText( entry.getKey() );</span>
+<span class="nc" id="L1282">        entryItem.setText( 1, entry.getDescription() );</span>
+<span class="nc" id="L1283">        TargetStepAttribute target = new TargetStepAttribute( stepMeta.getName(), entry.getKey(), false );</span>
+<span class="nc" id="L1284">        treeItemTargetMap.put( entryItem, target );</span>
+
+<span class="nc" id="L1286">        SourceStepField source = targetSourceMapping.get( target );</span>
+<span class="nc bnc" id="L1287" title="All 2 branches missed.">        if ( source != null ) {</span>
+<span class="nc" id="L1288">          entryItem.setText( 2, Const.NVL( source.getStepname(), &quot;&quot; ) );</span>
+<span class="nc" id="L1289">          entryItem.setText( 3, Const.NVL( source.getField(), &quot;&quot; ) );</span>
+        }
+<span class="nc" id="L1291">      } else {</span>
+        // Fields...
+        //
+<span class="nc" id="L1294">        TreeItem listsItem = new TreeItem( stepItem, SWT.NONE );</span>
+<span class="nc" id="L1295">        listsItem.setText( entry.getKey() );</span>
+<span class="nc" id="L1296">        listsItem.setText( 1, entry.getDescription() );</span>
+<span class="nc" id="L1297">        StepInjectionMetaEntry listEntry = entry.getDetails().get( 0 );</span>
+<span class="nc" id="L1298">        listsItem.addListener( SWT.Selection, new Listener() {</span>
+
+          @Override
+          public void handleEvent( Event arg0 ) {
+<span class="nc" id="L1302">            System.out.println( entry.getKey() + &quot; - &quot; + entry.getDescription() );</span>
+<span class="nc" id="L1303">          }</span>
+        } );
+
+        /*
+         * // Field... // TreeItem listItem = new TreeItem(listsItem, SWT.NONE);
+         * listItem.setText(listEntry.getKey()); listItem.setText(1, listEntry.getDescription());
+         */
+
+<span class="nc bnc" id="L1311" title="All 2 branches missed.">        for ( StepInjectionMetaEntry me : listEntry.getDetails() ) {</span>
+<span class="nc" id="L1312">          TreeItem treeItem = new TreeItem( listsItem, SWT.NONE );</span>
+<span class="nc" id="L1313">          treeItem.setText( me.getKey() );</span>
+<span class="nc" id="L1314">          treeItem.setText( 1, me.getDescription() );</span>
+
+<span class="nc" id="L1316">          TargetStepAttribute target = new TargetStepAttribute( stepMeta.getName(), me.getKey(), true );</span>
+<span class="nc" id="L1317">          treeItemTargetMap.put( treeItem, target );</span>
+
+<span class="nc" id="L1319">          SourceStepField source = targetSourceMapping.get( target );</span>
+<span class="nc bnc" id="L1320" title="All 2 branches missed.">          if ( source != null ) {</span>
+<span class="nc" id="L1321">            treeItem.setText( 2, Const.NVL( source.getStepname(), &quot;&quot; ) );</span>
+<span class="nc" id="L1322">            treeItem.setText( 3, Const.NVL( source.getField(), &quot;&quot; ) );</span>
+          }
+<span class="nc" id="L1324">        }</span>
+      }
+<span class="nc" id="L1326">    }</span>
+<span class="nc" id="L1327">  }</span>
+
+  private void processNewMDIDescription( StepMeta stepMeta, TreeItem stepItem, StepMetaInterface metaInterface ) {
+<span class="nc" id="L1330">    BeanInjectionInfo stepInjectionInfo = new BeanInjectionInfo( metaInterface.getClass() );</span>
+
+<span class="nc bnc" id="L1332" title="All 2 branches missed.">    for ( BeanInjectionInfo.Group gr : stepInjectionInfo.getGroups() ) {</span>
+<span class="nc" id="L1333">      boolean rootGroup = StringUtils.isEmpty( gr.getName() );</span>
+      TreeItem groupItem;
+<span class="nc bnc" id="L1335" title="All 2 branches missed.">      if ( !rootGroup ) {</span>
+<span class="nc" id="L1336">        groupItem = new TreeItem( stepItem, SWT.NONE );</span>
+<span class="nc" id="L1337">        groupItem.setText( gr.getName() );</span>
+<span class="nc" id="L1338">        groupItem.setText( 1, gr.getDescription() );</span>
+      } else {
+<span class="nc" id="L1340">        groupItem = null;</span>
+      }
+<span class="nc bnc" id="L1342" title="All 2 branches missed.">      for ( BeanInjectionInfo.Property property : gr.getGroupProperties() ) {</span>
+<span class="nc bnc" id="L1343" title="All 2 branches missed.">        TreeItem treeItem = new TreeItem( rootGroup ? stepItem : groupItem, SWT.NONE );</span>
+<span class="nc" id="L1344">        treeItem.setText( property.getName() );</span>
+<span class="nc" id="L1345">        treeItem.setText( 1, property.getDescription() );</span>
+
+<span class="nc bnc" id="L1347" title="All 2 branches missed.">        TargetStepAttribute target = new TargetStepAttribute( stepMeta.getName(), property.getName(), !rootGroup );</span>
+<span class="nc" id="L1348">        treeItemTargetMap.put( treeItem, target );</span>
+
+<span class="nc" id="L1350">        SourceStepField source = targetSourceMapping.get( target );</span>
+<span class="nc bnc" id="L1351" title="All 2 branches missed.">        if ( source != null ) {</span>
+<span class="nc" id="L1352">          treeItem.setText( 2, Const.NVL( source.getStepname(), &quot;&quot; ) );</span>
+<span class="nc" id="L1353">          treeItem.setText( 3, Const.NVL( source.getField(), &quot;&quot; ) );</span>
+        }
+<span class="nc" id="L1355">      }</span>
+<span class="nc" id="L1356">    }</span>
+<span class="nc" id="L1357">  }</span>
+
+  private void expandItemAndChildren( TreeItem item ) {
+<span class="nc" id="L1360">    item.setExpanded( true );</span>
+<span class="nc bnc" id="L1361" title="All 2 branches missed.">    for ( TreeItem item2 : item.getItems() ) {</span>
+<span class="nc" id="L1362">      expandItemAndChildren( item2 );</span>
+    }
+
+<span class="nc" id="L1365">  }</span>
+
+  private void cancel() {
+<span class="nc" id="L1368">    stepname = null;</span>
+<span class="nc" id="L1369">    metaInjectMeta.setChanged( changed );</span>
+<span class="nc" id="L1370">    dispose();</span>
+<span class="nc" id="L1371">  }</span>
+
+  private void ok() {
+<span class="nc bnc" id="L1374" title="All 2 branches missed.">    if ( Const.isEmpty( wStepname.getText() ) ) {</span>
+<span class="nc" id="L1375">      return;</span>
+    }
+
+<span class="nc" id="L1378">    stepname = wStepname.getText(); // return value</span>
+
+    try {
+<span class="nc" id="L1381">      loadTransformation();</span>
+<span class="nc" id="L1382">    } catch ( KettleException e ) {</span>
+<span class="nc" id="L1383">      new ErrorDialog( shell,</span>
+<span class="nc" id="L1384">        BaseMessages.getString( PKG, &quot;MetaInjectDialog.ErrorLoadingSpecifiedTransformation.Title&quot; ),</span>
+<span class="nc" id="L1385">        BaseMessages.getString( PKG, &quot;MetaInjectDialog.ErrorLoadingSpecifiedTransformation.Message&quot; ), e );</span>
+<span class="nc" id="L1386">    }</span>
+
+<span class="nc" id="L1388">    metaInjectMeta.setSpecificationMethod( specificationMethod );</span>
+<span class="nc bnc" id="L1389" title="All 4 branches missed.">    switch ( specificationMethod ) {</span>
+      case FILENAME:
+<span class="nc" id="L1391">        metaInjectMeta.setFileName( wFilename.getText() );</span>
+<span class="nc" id="L1392">        metaInjectMeta.setDirectoryPath( null );</span>
+<span class="nc" id="L1393">        metaInjectMeta.setTransName( null );</span>
+<span class="nc" id="L1394">        metaInjectMeta.setTransObjectId( null );</span>
+<span class="nc" id="L1395">        break;</span>
+      case REPOSITORY_BY_NAME:
+<span class="nc" id="L1397">        metaInjectMeta.setDirectoryPath( wDirectory.getText() );</span>
+<span class="nc" id="L1398">        metaInjectMeta.setTransName( wTransname.getText() );</span>
+<span class="nc" id="L1399">        metaInjectMeta.setFileName( null );</span>
+<span class="nc" id="L1400">        metaInjectMeta.setTransObjectId( null );</span>
+<span class="nc" id="L1401">        break;</span>
+      case REPOSITORY_BY_REFERENCE:
+<span class="nc" id="L1403">        metaInjectMeta.setFileName( null );</span>
+<span class="nc" id="L1404">        metaInjectMeta.setDirectoryPath( null );</span>
+<span class="nc" id="L1405">        metaInjectMeta.setTransName( null );</span>
+<span class="nc" id="L1406">        metaInjectMeta.setTransObjectId( referenceObjectId );</span>
+<span class="nc" id="L1407">        break;</span>
+      default:
+        break;
+    }
+
+<span class="nc" id="L1412">    metaInjectMeta.setSourceStepName( wSourceStep.getText() );</span>
+<span class="nc" id="L1413">    metaInjectMeta.setSourceOutputFields( new ArrayList&lt;MetaInjectOutputField&gt;() );</span>
+<span class="nc bnc" id="L1414" title="All 2 branches missed.">    for ( int i = 0; i &lt; wSourceFields.nrNonEmpty(); i++ ) {</span>
+<span class="nc" id="L1415">      TableItem item = wSourceFields.getNonEmpty( i );</span>
+<span class="nc" id="L1416">      int colIndex = 1;</span>
+<span class="nc" id="L1417">      String name = item.getText( colIndex++ );</span>
+<span class="nc" id="L1418">      int type = ValueMetaFactory.getIdForValueMeta( item.getText( colIndex++ ) );</span>
+<span class="nc" id="L1419">      int length = Const.toInt( item.getText( colIndex++ ), -1 );</span>
+<span class="nc" id="L1420">      int precision = Const.toInt( item.getText( colIndex++ ), -1 );</span>
+<span class="nc" id="L1421">      metaInjectMeta.getSourceOutputFields().add( new MetaInjectOutputField( name, type, length, precision ) );</span>
+    }
+
+<span class="nc" id="L1424">    metaInjectMeta.setTargetFile( wTargetFile.getText() );</span>
+<span class="nc" id="L1425">    metaInjectMeta.setNoExecution( wNoExecution.getSelection() );</span>
+
+<span class="nc" id="L1427">    metaInjectMeta.setStreamSourceStep( transMeta.findStep( wStreamingSourceStep.getText() ) );</span>
+<span class="nc" id="L1428">    metaInjectMeta.setStreamTargetStepname( wStreamingTargetStep.getText() );</span>
+
+<span class="nc" id="L1430">    metaInjectMeta.setTargetSourceMapping( targetSourceMapping );</span>
+<span class="nc" id="L1431">    metaInjectMeta.setChanged( true );</span>
+
+<span class="nc" id="L1433">    dispose();</span>
+<span class="nc" id="L1434">  }</span>
+
+  /**
+   * Ask the user to fill in the details...
+   */
+  protected void newTransformation() {
+
+<span class="nc" id="L1441">    TransMeta newTransMeta = new TransMeta();</span>
+
+<span class="nc" id="L1443">    newTransMeta.getDatabases().addAll( transMeta.getDatabases() );</span>
+<span class="nc" id="L1444">    newTransMeta.setRepository( transMeta.getRepository() );</span>
+<span class="nc" id="L1445">    newTransMeta.setRepositoryDirectory( transMeta.getRepositoryDirectory() );</span>
+
+    // Pass some interesting settings from the parent transformations...
+    //
+<span class="nc" id="L1449">    newTransMeta.setUsingUniqueConnections( transMeta.isUsingUniqueConnections() );</span>
+
+<span class="nc" id="L1451">    TransDialog transDialog = new TransDialog( shell, SWT.NONE, newTransMeta, repository );</span>
+<span class="nc bnc" id="L1452" title="All 2 branches missed.">    if ( transDialog.open() != null ) {</span>
+<span class="nc" id="L1453">      Spoon spoon = Spoon.getInstance();</span>
+<span class="nc" id="L1454">      spoon.addTransGraph( newTransMeta );</span>
+<span class="nc" id="L1455">      boolean saved = false;</span>
+      try {
+<span class="nc bnc" id="L1457" title="All 2 branches missed.">        if ( repository != null ) {</span>
+<span class="nc bnc" id="L1458" title="All 2 branches missed.">          if ( !Const.isEmpty( newTransMeta.getName() ) ) {</span>
+<span class="nc" id="L1459">            wStepname.setText( newTransMeta.getName() );</span>
+          }
+<span class="nc" id="L1461">          saved = spoon.saveToRepository( newTransMeta, false );</span>
+<span class="nc bnc" id="L1462" title="All 2 branches missed.">          if ( repository.getRepositoryMeta().getRepositoryCapabilities().supportsReferences() ) {</span>
+<span class="nc" id="L1463">            specificationMethod = ObjectLocationSpecificationMethod.REPOSITORY_BY_REFERENCE;</span>
+          } else {
+<span class="nc" id="L1465">            specificationMethod = ObjectLocationSpecificationMethod.REPOSITORY_BY_NAME;</span>
+          }
+        } else {
+<span class="nc" id="L1468">          saved = spoon.saveToFile( newTransMeta );</span>
+<span class="nc" id="L1469">          specificationMethod = ObjectLocationSpecificationMethod.FILENAME;</span>
+        }
+<span class="nc" id="L1471">      } catch ( Exception e ) {</span>
+<span class="nc" id="L1472">        new ErrorDialog( shell, &quot;Error&quot;, &quot;Error saving new transformation&quot;, e );</span>
+<span class="nc" id="L1473">      }</span>
+<span class="nc bnc" id="L1474" title="All 2 branches missed.">      if ( saved ) {</span>
+<span class="nc" id="L1475">        setRadioButtons();</span>
+<span class="nc bnc" id="L1476" title="All 4 branches missed.">        switch ( specificationMethod ) {</span>
+          case FILENAME:
+<span class="nc" id="L1478">            wFilename.setText( Const.NVL( newTransMeta.getFilename(), &quot;&quot; ) );</span>
+<span class="nc" id="L1479">            break;</span>
+          case REPOSITORY_BY_NAME:
+<span class="nc" id="L1481">            wTransname.setText( Const.NVL( newTransMeta.getName(), &quot;&quot; ) );</span>
+<span class="nc" id="L1482">            wDirectory.setText( newTransMeta.getRepositoryDirectory().getPath() );</span>
+<span class="nc" id="L1483">            break;</span>
+          case REPOSITORY_BY_REFERENCE:
+<span class="nc" id="L1485">            getByReferenceData( newTransMeta.getObjectId() );</span>
+<span class="nc" id="L1486">            break;</span>
+          default:
+            break;
+        }
+      }
+    }
+<span class="nc" id="L1492">  }</span>
+
+  private void getByReferenceData( ObjectId transObjectId ) {
+    try {
+<span class="nc bnc" id="L1496" title="All 2 branches missed.">      if ( repository == null ) {</span>
+<span class="nc" id="L1497">        throw new KettleException( BaseMessages.getString(</span>
+          PKG, &quot;MappingDialog.Exception.NotConnectedToRepository.Message&quot; ) );
+      }
+<span class="nc" id="L1500">      RepositoryObject transInf = repository.getObjectInformation( transObjectId, RepositoryObjectType.JOB );</span>
+<span class="nc bnc" id="L1501" title="All 2 branches missed.">      if ( transInf != null ) {</span>
+<span class="nc" id="L1502">        getByReferenceData( transInf );</span>
+      }
+<span class="nc" id="L1504">    } catch ( KettleException e ) {</span>
+<span class="nc" id="L1505">      new ErrorDialog( shell,</span>
+<span class="nc" id="L1506">        BaseMessages.getString( PKG, &quot;MappingDialog.Exception.UnableToReferenceObjectId.Title&quot; ),</span>
+<span class="nc" id="L1507">        BaseMessages.getString( PKG, &quot;MappingDialog.Exception.UnableToReferenceObjectId.Message&quot; ), e );</span>
+<span class="nc" id="L1508">    }</span>
+<span class="nc" id="L1509">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.5.201505241946</span></div></body></html>

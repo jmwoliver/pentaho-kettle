@@ -1,0 +1,38 @@
+GROUP,PACKAGE,CLASS,INSTRUCTION_MISSED,INSTRUCTION_COVERED,BRANCH_MISSED,BRANCH_COVERED,LINE_MISSED,LINE_COVERED,COMPLEXITY_MISSED,COMPLEXITY_COVERED,METHOD_MISSED,METHOD_COVERED
+meta-inject-plugin,org.pentaho.di.ui.trans.steps.metainject,MetaInjectDialog.new SelectionAdapter() {...},10,0,0,0,3,0,2,0,2,0
+meta-inject-plugin,org.pentaho.di.ui.trans.steps.metainject,MetaInjectDialog.new SelectionAdapter() {...},10,0,0,0,3,0,2,0,2,0
+meta-inject-plugin,org.pentaho.di.ui.trans.steps.metainject,MetaInjectDialog.new SelectionAdapter() {...},10,0,0,0,3,0,2,0,2,0
+meta-inject-plugin,org.pentaho.di.ui.trans.steps.metainject,MetaInjectDialog.new ModifyListener() {...},11,0,0,0,3,0,2,0,2,0
+meta-inject-plugin,org.pentaho.di.ui.trans.steps.metainject,MetaInjectDialog.new SelectionAdapter() {...},10,0,0,0,3,0,2,0,2,0
+meta-inject-plugin,org.pentaho.di.ui.trans.steps.metainject,MetaInjectDialog.new ShellAdapter() {...},10,0,0,0,3,0,2,0,2,0
+meta-inject-plugin,org.pentaho.di.ui.trans.steps.metainject,MetaInjectDialog.new Listener() {...},10,0,0,0,3,0,2,0,2,0
+meta-inject-plugin,org.pentaho.di.ui.trans.steps.metainject,MetaInjectDialog.new Listener() {...},10,0,0,0,3,0,2,0,2,0
+meta-inject-plugin,org.pentaho.di.ui.trans.steps.metainject,MetaInjectDialog.new ModifyListener() {...},15,0,0,0,4,0,2,0,2,0
+meta-inject-plugin,org.pentaho.di.ui.trans.steps.metainject,MetaInjectDialog.new SelectionAdapter() {...},15,0,0,0,4,0,2,0,2,0
+meta-inject-plugin,org.pentaho.di.ui.trans.steps.metainject,MetaInjectDialog.new SelectionAdapter() {...},15,0,0,0,4,0,2,0,2,0
+meta-inject-plugin,org.pentaho.di.ui.trans.steps.metainject,MetaInjectDialog.new SelectionAdapter() {...},11,0,0,0,3,0,2,0,2,0
+meta-inject-plugin,org.pentaho.di.ui.trans.steps.metainject,MetaInjectDialog.new Object() {...},26,0,0,0,1,0,1,0,1,0
+meta-inject-plugin,org.pentaho.di.ui.trans.steps.metainject,MetaInjectDialog.new Listener() {...},26,0,0,0,3,0,2,0,2,0
+meta-inject-plugin,org.pentaho.di.ui.trans.steps.metainject,MetaInjectDialog.new Listener() {...},206,0,16,0,39,0,10,0,2,0
+meta-inject-plugin,org.pentaho.di.ui.trans.steps.metainject,MetaInjectDialog.new SelectionAdapter() {...},10,0,0,0,3,0,2,0,2,0
+meta-inject-plugin,org.pentaho.di.ui.trans.steps.metainject,MetaInjectDialog,4309,0,170,0,789,0,119,0,30,0
+meta-inject-plugin,org.pentaho.di.ui.trans.steps.metainject,MetaInjectDialog.new ModifyListener() {...},15,0,0,0,4,0,2,0,2,0
+meta-inject-plugin,org.pentaho.di.ui.trans.steps.metainject,MetaInjectDialog.new ModifyListener() {...},15,0,0,0,4,0,2,0,2,0
+meta-inject-plugin,org.pentaho.di.ui.trans.steps.metainject,MetaInjectDialog.new SelectionAdapter() {...},10,0,0,0,3,0,2,0,2,0
+meta-inject-plugin,org.pentaho.di.ui.trans.steps.metainject,MetaInjectDialog.new SelectionAdapter() {...},10,0,0,0,3,0,2,0,2,0
+meta-inject-plugin,org.pentaho.di.ui.trans.steps.metainject,MetaInjectDialog.new ModifyListener() {...},15,0,0,0,4,0,2,0,2,0
+meta-inject-plugin,org.pentaho.di.ui.trans.steps.metainject,MetaInjectDialog.new SelectionAdapter() {...},10,0,0,0,3,0,2,0,2,0
+meta-inject-plugin,org.pentaho.di.ui.trans.steps.metainject,MetaInjectDialog.new SelectionAdapter() {...},15,0,0,0,4,0,2,0,2,0
+meta-inject-plugin,org.pentaho.di.trans.steps.metainject,SourceStepField,9,51,4,4,4,13,5,6,1,6
+meta-inject-plugin,org.pentaho.di.trans.steps.metainject,MetaInjectOutputField.DataTypeConverter,0,6,0,0,0,2,0,2,0,2
+meta-inject-plugin,org.pentaho.di.trans.steps.metainject,RepositoryExporterExtension,103,0,6,0,26,0,6,0,3,0
+meta-inject-plugin,org.pentaho.di.trans.steps.metainject,MetaInjectMapping,0,31,0,0,0,14,0,9,0,9
+meta-inject-plugin,org.pentaho.di.trans.steps.metainject,MetaInjectMeta.new Object() {...},26,0,0,0,1,0,1,0,1,0
+meta-inject-plugin,org.pentaho.di.trans.steps.metainject,RepositoryImporterExtension,139,0,22,0,30,0,15,0,4,0
+meta-inject-plugin,org.pentaho.di.trans.steps.metainject,MetaInjectData,0,3,0,0,0,2,0,1,0,1
+meta-inject-plugin,org.pentaho.di.trans.steps.metainject,TargetStepAttribute,17,53,4,4,8,13,7,6,3,6
+meta-inject-plugin,org.pentaho.di.trans.steps.metainject,MetaInject,592,993,84,97,100,228,62,56,3,22
+meta-inject-plugin,org.pentaho.di.trans.steps.metainject,MetaInject.new RowAdapter() {...},12,0,0,0,3,0,2,0,2,0
+meta-inject-plugin,org.pentaho.di.trans.steps.metainject,MetaInject.new TransStoppedListener() {...},4,9,0,0,2,1,1,1,1,1
+meta-inject-plugin,org.pentaho.di.trans.steps.metainject,MetaInjectMeta,636,972,50,40,108,204,55,51,18,42
+meta-inject-plugin,org.pentaho.di.trans.steps.metainject,MetaInjectOutputField,10,50,0,0,1,21,1,11,1,11

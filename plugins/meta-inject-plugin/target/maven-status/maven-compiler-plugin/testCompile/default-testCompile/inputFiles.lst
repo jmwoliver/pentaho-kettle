@@ -1,0 +1,6 @@
+/home/user/git/pentaho-kettle/plugins/meta-inject-plugin/src/test/java/org/pentaho/di/trans/steps/metainject/MetaInjectMetaLoadSaveTest.java
+/home/user/git/pentaho-kettle/plugins/meta-inject-plugin/src/test/java/org/pentaho/di/trans/TransMetaTest.java
+/home/user/git/pentaho-kettle/plugins/meta-inject-plugin/src/test/java/org/pentaho/di/trans/steps/metainject/MetaInjectMetaTest.java
+/home/user/git/pentaho-kettle/plugins/meta-inject-plugin/src/test/java/org/pentaho/di/trans/steps/metainject/MetaInjectTest.java
+/home/user/git/pentaho-kettle/plugins/meta-inject-plugin/src/test/java/org/pentaho/di/trans/steps/metainject/MetaInjectMetaInjectionTest.java
+/home/user/git/pentaho-kettle/plugins/meta-inject-plugin/src/test/java/org/pentaho/di/repository/RepositoryImporterTest.java

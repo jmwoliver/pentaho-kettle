@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: org.pentaho.di.trans.steps.metainject.MetaInjectMetaTest
+-------------------------------------------------------------------------------
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.197 sec - in org.pentaho.di.trans.steps.metainject.MetaInjectMetaTest

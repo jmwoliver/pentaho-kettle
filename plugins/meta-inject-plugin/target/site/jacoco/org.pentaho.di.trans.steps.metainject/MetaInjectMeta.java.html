@@ -1,0 +1,847 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>MetaInjectMeta.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">meta-inject-plugin</a> &gt; <a href="index.source.html" class="el_package">org.pentaho.di.trans.steps.metainject</a> &gt; <span class="el_source">MetaInjectMeta.java</span></div><h1>MetaInjectMeta.java</h1><pre class="source lang-java linenums">/*! ******************************************************************************
+ *
+ * Pentaho Data Integration
+ *
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
+ *
+ *******************************************************************************
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ ******************************************************************************/
+
+package org.pentaho.di.trans.steps.metainject;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+
+import org.pentaho.di.core.Const;
+import org.pentaho.di.core.ObjectLocationSpecificationMethod;
+import org.pentaho.di.core.database.DatabaseMeta;
+import org.pentaho.di.core.exception.KettleException;
+import org.pentaho.di.core.exception.KettlePluginException;
+import org.pentaho.di.core.exception.KettleStepException;
+import org.pentaho.di.core.exception.KettleXMLException;
+import org.pentaho.di.core.injection.Injection;
+import org.pentaho.di.core.injection.InjectionDeep;
+import org.pentaho.di.core.injection.InjectionSupported;
+import org.pentaho.di.core.row.RowMetaInterface;
+import org.pentaho.di.core.row.value.ValueMetaFactory;
+import org.pentaho.di.core.util.CurrentDirectoryResolver;
+import org.pentaho.di.core.variables.VariableSpace;
+import org.pentaho.di.core.xml.XMLHandler;
+import org.pentaho.di.i18n.BaseMessages;
+import org.pentaho.di.repository.ObjectId;
+import org.pentaho.di.repository.Repository;
+import org.pentaho.di.repository.RepositoryDirectory;
+import org.pentaho.di.repository.RepositoryDirectoryInterface;
+import org.pentaho.di.repository.StringObjectId;
+import org.pentaho.di.resource.ResourceDefinition;
+import org.pentaho.di.resource.ResourceEntry;
+import org.pentaho.di.resource.ResourceEntry.ResourceType;
+import org.pentaho.di.resource.ResourceNamingInterface;
+import org.pentaho.di.resource.ResourceReference;
+import org.pentaho.di.trans.Trans;
+import org.pentaho.di.trans.TransHopMeta;
+import org.pentaho.di.trans.TransMeta;
+import org.pentaho.di.trans.step.BaseStepMeta;
+import org.pentaho.di.trans.step.StepDataInterface;
+import org.pentaho.di.trans.step.StepInterface;
+import org.pentaho.di.trans.step.StepMeta;
+import org.pentaho.di.trans.step.StepMetaChangeListenerInterface;
+import org.pentaho.di.trans.step.StepMetaInterface;
+import org.pentaho.metastore.api.IMetaStore;
+import org.w3c.dom.Node;
+
+/**
+ * @since 2007-07-05
+ * @author matt
+ * @version 3.0
+ */
+@InjectionSupported( localizationPrefix = &quot;MetaInject.Injection.&quot;, groups = { &quot;SOURCE_OUTPUT_FIELDS&quot;,
+  &quot;MAPPING_FIELDS&quot; } )
+public class MetaInjectMeta extends BaseStepMeta implements StepMetaInterface, StepMetaChangeListenerInterface {
+
+<span class="fc" id="L78">  private static Class&lt;?&gt; PKG = MetaInjectMeta.class; // for i18n purposes, needed by Translator2!!</span>
+
+  private static final String MAPPINGS = &quot;mappings&quot;;
+  private static final String MAPPING = &quot;mapping&quot;;
+
+  private static final String SPECIFICATION_METHOD = &quot;specification_method&quot;;
+  private static final String TRANS_OBJECT_ID = &quot;trans_object_id&quot;;
+  private static final String TRANS_NAME = &quot;trans_name&quot;;
+  private static final String FILENAME = &quot;filename&quot;;
+  private static final String DIRECTORY_PATH = &quot;directory_path&quot;;
+  private static final String TARGET_FILE = &quot;target_file&quot;;
+  private static final String NO_EXECUTION = &quot;no_execution&quot;;
+  private static final String SOURCE_STEP = &quot;source_step&quot;;
+
+  private static final String STREAM_SOURCE_STEP = &quot;stream_source_step&quot;;
+  private static final String STREAM_TARGET_STEP = &quot;stream_target_step&quot;;
+  private static final String TARGET_STEP_NAME = &quot;target_step_name&quot;;
+  private static final String TARGET_ATTRIBUTE_KEY = &quot;target_attribute_key&quot;;
+  private static final String TARGET_DETAIL = &quot;target_detail&quot;;
+  private static final String SOURCE_FIELD = &quot;source_field&quot;;
+  private static final String SOURCE_OUTPUT_FIELDS = &quot;source_output_fields&quot;;
+  private static final String SOURCE_OUTPUT_FIELD = &quot;source_output_field&quot;;
+  private static final String SOURCE_OUTPUT_FIELD_NAME = &quot;source_output_field_name&quot;;
+  private static final String SOURCE_OUTPUT_FIELD_TYPE = &quot;source_output_field_type&quot;;
+  private static final String SOURCE_OUTPUT_FIELD_LENGTH = &quot;source_output_field_length&quot;;
+  private static final String SOURCE_OUTPUT_FIELD_PRECISION = &quot;source_output_field_precision&quot;;
+
+  private static final String MAPPING_SOURCE_FIELD = &quot;mapping_source_field&quot;;
+  private static final String MAPPING_SOURCE_STEP = &quot;mapping_source_step&quot;;
+  private static final String MAPPING_TARGET_DETAIL = &quot;mapping_target_detail&quot;;
+  private static final String MAPPING_TARGET_ATTRIBUTE_KEY = &quot;mapping_target_attribute_key&quot;;
+  private static final String MAPPING_TARGET_STEP_NAME = &quot;mapping_target_step_name&quot;;
+
+  private static final String GROUP_AND_NAME_DELIMITER = &quot;.&quot;;
+
+  // description of the transformation to execute...
+  //
+  @Injection( name = &quot;TRANS_NAME&quot; )
+  private String transName;
+
+  @Injection( name = &quot;FILE_NAME&quot; )
+  private String fileName;
+
+  @Injection( name = &quot;DIRECTORY_PATH&quot; )
+  private String directoryPath;
+
+  private ObjectId transObjectId;
+
+  @Injection( name = &quot;TRANS_SEPECIFICATION_METHOD&quot; )
+  private ObjectLocationSpecificationMethod specificationMethod;
+
+  @Injection( name = &quot;SOURCE_STEP_NAME&quot; )
+  private String sourceStepName;
+
+  @InjectionDeep
+  private List&lt;MetaInjectOutputField&gt; sourceOutputFields;
+
+  private Map&lt;TargetStepAttribute, SourceStepField&gt; targetSourceMapping;
+
+  @InjectionDeep
+  private List&lt;MetaInjectMapping&gt; metaInjectMapping;
+
+  @Injection( name = &quot;TARGET_FILE&quot; )
+  private String targetFile;
+
+  @Injection( name = &quot;NO_EXECUTION&quot; )
+  private boolean noExecution;
+
+  @Injection( name = &quot;STREAMING_SOURCE_STEP&quot; )
+  private String streamSourceStepname;
+
+  private StepMeta streamSourceStep;
+
+  @Injection( name = &quot;STREAMING_TARGET_STEP&quot; )
+  private String streamTargetStepname;
+
+  public MetaInjectMeta() {
+<span class="fc" id="L155">    super(); // allocate BaseStepMeta</span>
+<span class="fc" id="L156">    specificationMethod = ObjectLocationSpecificationMethod.FILENAME;</span>
+<span class="fc" id="L157">    targetSourceMapping = new HashMap&lt;TargetStepAttribute, SourceStepField&gt;();</span>
+<span class="fc" id="L158">    sourceOutputFields = new ArrayList&lt;MetaInjectOutputField&gt;();</span>
+<span class="fc" id="L159">  }</span>
+
+  // TODO: deep copy
+  @Override
+  public Object clone() {
+<span class="fc" id="L164">    Object retval = super.clone();</span>
+<span class="fc" id="L165">    return retval;</span>
+  }
+
+  @Override
+  public void setDefault() {
+<span class="nc" id="L170">  }</span>
+
+  @Override
+  public String getXML() {
+<span class="fc" id="L174">    actualizeMetaInjectMapping();</span>
+<span class="fc" id="L175">    StringBuilder retval = new StringBuilder( 500 );</span>
+
+<span class="pc bpc" id="L177" title="1 of 2 branches missed.">    retval.append( &quot;    &quot; ).append( XMLHandler.addTagValue( SPECIFICATION_METHOD, specificationMethod == null ? null</span>
+<span class="fc" id="L178">        : specificationMethod.getCode() ) );</span>
+<span class="pc bpc" id="L179" title="1 of 2 branches missed.">    retval.append( &quot;    &quot; ).append( XMLHandler.addTagValue( TRANS_OBJECT_ID, transObjectId == null ? null</span>
+<span class="fc" id="L180">        : transObjectId.toString() ) );</span>
+<span class="fc" id="L181">    retval.append( &quot;    &quot; ).append( XMLHandler.addTagValue( TRANS_NAME, transName ) );</span>
+<span class="fc" id="L182">    retval.append( &quot;    &quot; ).append( XMLHandler.addTagValue( FILENAME, fileName ) );</span>
+<span class="fc" id="L183">    retval.append( &quot;    &quot; ).append( XMLHandler.addTagValue( DIRECTORY_PATH, directoryPath ) );</span>
+
+<span class="fc" id="L185">    retval.append( &quot;    &quot; ).append( XMLHandler.addTagValue( SOURCE_STEP, sourceStepName ) );</span>
+<span class="fc" id="L186">    retval.append( &quot;    &quot; ).append( XMLHandler.openTag( SOURCE_OUTPUT_FIELDS ) );</span>
+<span class="fc bfc" id="L187" title="All 2 branches covered.">    for ( MetaInjectOutputField field : sourceOutputFields ) {</span>
+<span class="fc" id="L188">      retval.append( &quot;      &quot; ).append( XMLHandler.openTag( SOURCE_OUTPUT_FIELD ) );</span>
+<span class="fc" id="L189">      retval.append( &quot;        &quot; ).append( XMLHandler.addTagValue( SOURCE_OUTPUT_FIELD_NAME, field.getName() ) );</span>
+<span class="fc" id="L190">      retval.append( &quot;        &quot; ).append( XMLHandler.addTagValue( SOURCE_OUTPUT_FIELD_TYPE, field</span>
+<span class="fc" id="L191">          .getTypeDescription() ) );</span>
+<span class="fc" id="L192">      retval.append( &quot;        &quot; ).append( XMLHandler.addTagValue( SOURCE_OUTPUT_FIELD_LENGTH, field.getLength() ) );</span>
+<span class="fc" id="L193">      retval.append( &quot;        &quot; ).append( XMLHandler.addTagValue( SOURCE_OUTPUT_FIELD_PRECISION, field</span>
+<span class="fc" id="L194">          .getPrecision() ) );</span>
+<span class="fc" id="L195">      retval.append( &quot;      &quot; ).append( XMLHandler.closeTag( SOURCE_OUTPUT_FIELD ) );</span>
+<span class="fc" id="L196">    }</span>
+<span class="fc" id="L197">    retval.append( &quot;    &quot; ).append( XMLHandler.closeTag( SOURCE_OUTPUT_FIELDS ) );</span>
+
+<span class="fc" id="L199">    retval.append( &quot;    &quot; ).append( XMLHandler.addTagValue( TARGET_FILE, targetFile ) );</span>
+<span class="fc" id="L200">    retval.append( &quot;    &quot; ).append( XMLHandler.addTagValue( NO_EXECUTION, noExecution ) );</span>
+
+<span class="pc bpc" id="L202" title="3 of 4 branches missed.">    if ( ( streamSourceStepname == null ) &amp;&amp;  ( streamSourceStep != null ) ) {</span>
+<span class="nc" id="L203">      streamSourceStepname = streamSourceStep.getName();</span>
+    }
+<span class="fc" id="L205">    retval.append( &quot;    &quot; ).append( XMLHandler.addTagValue( STREAM_SOURCE_STEP, streamSourceStepname ) );</span>
+<span class="fc" id="L206">    retval.append( &quot;    &quot; ).append( XMLHandler.addTagValue( STREAM_TARGET_STEP, streamTargetStepname ) );</span>
+
+<span class="fc" id="L208">    retval.append( &quot;    &quot; ).append( XMLHandler.openTag( MAPPINGS ) );</span>
+<span class="pc bpc" id="L209" title="1 of 2 branches missed.">    for ( TargetStepAttribute target : targetSourceMapping.keySet() ) {</span>
+<span class="nc" id="L210">      retval.append( &quot;      &quot; ).append( XMLHandler.openTag( MAPPING ) );</span>
+<span class="nc" id="L211">      SourceStepField source = targetSourceMapping.get( target );</span>
+<span class="nc" id="L212">      retval.append( &quot;        &quot; ).append( XMLHandler.addTagValue( TARGET_STEP_NAME, target.getStepname() ) );</span>
+<span class="nc" id="L213">      retval.append( &quot;        &quot; ).append( XMLHandler.addTagValue( TARGET_ATTRIBUTE_KEY, target.getAttributeKey() ) );</span>
+<span class="nc" id="L214">      retval.append( &quot;        &quot; ).append( XMLHandler.addTagValue( TARGET_DETAIL, target.isDetail() ) );</span>
+<span class="nc" id="L215">      retval.append( &quot;        &quot; ).append( XMLHandler.addTagValue( SOURCE_STEP, source.getStepname() ) );</span>
+<span class="nc" id="L216">      retval.append( &quot;        &quot; ).append( XMLHandler.addTagValue( SOURCE_FIELD, source.getField() ) );</span>
+<span class="nc" id="L217">      retval.append( &quot;      &quot; ).append( XMLHandler.closeTag( MAPPING ) );</span>
+<span class="nc" id="L218">    }</span>
+<span class="fc" id="L219">    retval.append( &quot;    &quot; ).append( XMLHandler.closeTag( MAPPINGS ) );</span>
+
+<span class="fc" id="L221">    return retval.toString();</span>
+  }
+
+  @Override
+  public void loadXML( Node stepnode, List&lt;DatabaseMeta&gt; databases, IMetaStore metaStore ) throws KettleXMLException {
+    try {
+
+<span class="fc" id="L228">      String method = XMLHandler.getTagValue( stepnode, SPECIFICATION_METHOD );</span>
+<span class="fc" id="L229">      specificationMethod = ObjectLocationSpecificationMethod.getSpecificationMethodByCode( method );</span>
+<span class="fc" id="L230">      String transId = XMLHandler.getTagValue( stepnode, TRANS_OBJECT_ID );</span>
+<span class="pc bpc" id="L231" title="1 of 2 branches missed.">      transObjectId = Const.isEmpty( transId ) ? null : new StringObjectId( transId );</span>
+
+<span class="fc" id="L233">      transName = XMLHandler.getTagValue( stepnode, TRANS_NAME );</span>
+<span class="fc" id="L234">      fileName = XMLHandler.getTagValue( stepnode, FILENAME );</span>
+<span class="fc" id="L235">      directoryPath = XMLHandler.getTagValue( stepnode, DIRECTORY_PATH );</span>
+
+<span class="fc" id="L237">      sourceStepName = XMLHandler.getTagValue( stepnode, SOURCE_STEP );</span>
+<span class="fc" id="L238">      Node outputFieldsNode = XMLHandler.getSubNode( stepnode, SOURCE_OUTPUT_FIELDS );</span>
+<span class="fc" id="L239">      List&lt;Node&gt; outputFieldNodes = XMLHandler.getNodes( outputFieldsNode, SOURCE_OUTPUT_FIELD );</span>
+<span class="fc" id="L240">      sourceOutputFields = new ArrayList&lt;MetaInjectOutputField&gt;();</span>
+<span class="fc bfc" id="L241" title="All 2 branches covered.">      for ( Node outputFieldNode : outputFieldNodes ) {</span>
+<span class="fc" id="L242">        String name = XMLHandler.getTagValue( outputFieldNode, SOURCE_OUTPUT_FIELD_NAME );</span>
+<span class="fc" id="L243">        String typeName = XMLHandler.getTagValue( outputFieldNode, SOURCE_OUTPUT_FIELD_TYPE );</span>
+<span class="fc" id="L244">        int length = Const.toInt( XMLHandler.getTagValue( outputFieldNode, SOURCE_OUTPUT_FIELD_LENGTH ), -1 );</span>
+<span class="fc" id="L245">        int precision = Const.toInt( XMLHandler.getTagValue( outputFieldNode, SOURCE_OUTPUT_FIELD_PRECISION ), -1 );</span>
+<span class="fc" id="L246">        int type = ValueMetaFactory.getIdForValueMeta( typeName );</span>
+<span class="fc" id="L247">        sourceOutputFields.add( new MetaInjectOutputField( name, type, length, precision ) );</span>
+<span class="fc" id="L248">      }</span>
+
+<span class="fc" id="L250">      targetFile = XMLHandler.getTagValue( stepnode, TARGET_FILE );</span>
+<span class="fc" id="L251">      noExecution = &quot;Y&quot;.equalsIgnoreCase( XMLHandler.getTagValue( stepnode, NO_EXECUTION ) );</span>
+
+<span class="fc" id="L253">      streamSourceStepname = XMLHandler.getTagValue( stepnode, STREAM_SOURCE_STEP );</span>
+<span class="fc" id="L254">      streamTargetStepname = XMLHandler.getTagValue( stepnode, STREAM_TARGET_STEP );</span>
+
+<span class="fc" id="L256">      Node mappingsNode = XMLHandler.getSubNode( stepnode, MAPPINGS );</span>
+<span class="fc" id="L257">      int nrMappings = XMLHandler.countNodes( mappingsNode, MAPPING );</span>
+<span class="pc bpc" id="L258" title="1 of 2 branches missed.">      for ( int i = 0; i &lt; nrMappings; i++ ) {</span>
+<span class="nc" id="L259">        Node mappingNode = XMLHandler.getSubNodeByNr( mappingsNode, MAPPING, i );</span>
+<span class="nc" id="L260">        String targetStepname = XMLHandler.getTagValue( mappingNode, TARGET_STEP_NAME );</span>
+<span class="nc" id="L261">        String targetAttributeKey = XMLHandler.getTagValue( mappingNode, TARGET_ATTRIBUTE_KEY );</span>
+<span class="nc" id="L262">        boolean targetDetail = &quot;Y&quot;.equalsIgnoreCase( XMLHandler.getTagValue( mappingNode, TARGET_DETAIL ) );</span>
+<span class="nc" id="L263">        String sourceStepname = XMLHandler.getTagValue( mappingNode, SOURCE_STEP );</span>
+<span class="nc" id="L264">        String sourceField = XMLHandler.getTagValue( mappingNode, SOURCE_FIELD );</span>
+
+<span class="nc" id="L266">        TargetStepAttribute target = new TargetStepAttribute( targetStepname, targetAttributeKey, targetDetail );</span>
+<span class="nc" id="L267">        SourceStepField source = new SourceStepField( sourceStepname, sourceField );</span>
+<span class="nc" id="L268">        targetSourceMapping.put( target, source );</span>
+      }
+<span class="nc" id="L270">    } catch ( Exception e ) {</span>
+<span class="nc" id="L271">      throw new KettleXMLException( &quot;Unable to load step info from XML&quot;, e );</span>
+<span class="fc" id="L272">    }</span>
+<span class="fc" id="L273">  }</span>
+
+  @Override
+  public void readRep( Repository rep, IMetaStore metaStore, ObjectId id_step, List&lt;DatabaseMeta&gt; databases )
+    throws KettleException {
+    try {
+<span class="fc" id="L279">      String method = rep.getStepAttributeString( id_step, SPECIFICATION_METHOD );</span>
+<span class="fc" id="L280">      specificationMethod = ObjectLocationSpecificationMethod.getSpecificationMethodByCode( method );</span>
+<span class="fc" id="L281">      String transId = rep.getStepAttributeString( id_step, TRANS_OBJECT_ID );</span>
+<span class="pc bpc" id="L282" title="1 of 2 branches missed.">      transObjectId = Const.isEmpty( transId ) ? null : new StringObjectId( transId );</span>
+<span class="fc" id="L283">      transName = rep.getStepAttributeString( id_step, TRANS_NAME );</span>
+<span class="fc" id="L284">      fileName = rep.getStepAttributeString( id_step, FILENAME );</span>
+<span class="fc" id="L285">      directoryPath = rep.getStepAttributeString( id_step, DIRECTORY_PATH );</span>
+
+<span class="fc" id="L287">      sourceStepName = rep.getStepAttributeString( id_step, SOURCE_STEP );</span>
+<span class="fc" id="L288">      streamSourceStepname = rep.getStepAttributeString( id_step, STREAM_SOURCE_STEP );</span>
+<span class="fc" id="L289">      streamTargetStepname = rep.getStepAttributeString( id_step, STREAM_TARGET_STEP );</span>
+<span class="fc" id="L290">      sourceOutputFields = new ArrayList&lt;MetaInjectOutputField&gt;();</span>
+<span class="fc" id="L291">      int nrSourceOutputFields = rep.countNrStepAttributes( id_step, SOURCE_OUTPUT_FIELD_NAME );</span>
+<span class="fc bfc" id="L292" title="All 2 branches covered.">      for ( int i = 0; i &lt; nrSourceOutputFields; i++ ) {</span>
+<span class="fc" id="L293">        String name = rep.getStepAttributeString( id_step, i, SOURCE_OUTPUT_FIELD_NAME );</span>
+<span class="fc" id="L294">        String typeName = rep.getStepAttributeString( id_step, i, SOURCE_OUTPUT_FIELD_TYPE );</span>
+<span class="fc" id="L295">        int length = (int) rep.getStepAttributeInteger( id_step, i, SOURCE_OUTPUT_FIELD_LENGTH );</span>
+<span class="fc" id="L296">        int precision = (int) rep.getStepAttributeInteger( id_step, i, SOURCE_OUTPUT_FIELD_PRECISION );</span>
+<span class="fc" id="L297">        int type = ValueMetaFactory.getIdForValueMeta( typeName );</span>
+<span class="fc" id="L298">        sourceOutputFields.add( new MetaInjectOutputField( name, type, length, precision ) );</span>
+      }
+<span class="fc" id="L300">      targetFile = rep.getStepAttributeString( id_step, TARGET_FILE );</span>
+<span class="fc" id="L301">      noExecution = rep.getStepAttributeBoolean( id_step, NO_EXECUTION );</span>
+
+<span class="fc" id="L303">      int nrMappings = rep.countNrStepAttributes( id_step, MAPPING_TARGET_STEP_NAME );</span>
+<span class="pc bpc" id="L304" title="1 of 2 branches missed.">      for ( int i = 0; i &lt; nrMappings; i++ ) {</span>
+<span class="nc" id="L305">        String targetStepname = rep.getStepAttributeString( id_step, i, MAPPING_TARGET_STEP_NAME );</span>
+<span class="nc" id="L306">        String targetAttributeKey = rep.getStepAttributeString( id_step, i, MAPPING_TARGET_ATTRIBUTE_KEY );</span>
+<span class="nc" id="L307">        boolean targetDetail = rep.getStepAttributeBoolean( id_step, i, MAPPING_TARGET_DETAIL );</span>
+<span class="nc" id="L308">        String sourceStepname = rep.getStepAttributeString( id_step, i, MAPPING_SOURCE_STEP );</span>
+<span class="nc" id="L309">        String sourceField = rep.getStepAttributeString( id_step, i, MAPPING_SOURCE_FIELD );</span>
+
+<span class="nc" id="L311">        TargetStepAttribute target = new TargetStepAttribute( targetStepname, targetAttributeKey, targetDetail );</span>
+<span class="nc" id="L312">        SourceStepField source = new SourceStepField( sourceStepname, sourceField );</span>
+<span class="nc" id="L313">        targetSourceMapping.put( target, source );</span>
+      }
+<span class="nc" id="L315">    } catch ( Exception e ) {</span>
+<span class="nc" id="L316">      throw new KettleException( &quot;Unexpected error reading step information from the repository&quot;, e );</span>
+<span class="fc" id="L317">    }</span>
+<span class="fc" id="L318">  }</span>
+
+  @Override
+  public void saveRep( Repository rep, IMetaStore metaStore, ObjectId id_transformation, ObjectId id_step )
+    throws KettleException {
+    try {
+<span class="pc bpc" id="L324" title="1 of 2 branches missed.">      rep.saveStepAttribute( id_transformation, id_step, SPECIFICATION_METHOD, specificationMethod == null ? null</span>
+<span class="fc" id="L325">          : specificationMethod.getCode() );</span>
+<span class="pc bpc" id="L326" title="1 of 2 branches missed.">      rep.saveStepAttribute( id_transformation, id_step, TRANS_OBJECT_ID, transObjectId == null ? null : transObjectId</span>
+<span class="fc" id="L327">          .toString() );</span>
+<span class="fc" id="L328">      rep.saveStepAttribute( id_transformation, id_step, FILENAME, fileName );</span>
+<span class="fc" id="L329">      rep.saveStepAttribute( id_transformation, id_step, TRANS_NAME, transName );</span>
+<span class="fc" id="L330">      rep.saveStepAttribute( id_transformation, id_step, DIRECTORY_PATH, directoryPath );</span>
+
+<span class="fc" id="L332">      rep.saveStepAttribute( id_transformation, id_step, SOURCE_STEP, sourceStepName );</span>
+<span class="fc" id="L333">      rep.saveStepAttribute( id_transformation, id_step, STREAM_SOURCE_STEP, streamSourceStepname );</span>
+<span class="fc" id="L334">      rep.saveStepAttribute( id_transformation, id_step, STREAM_TARGET_STEP, streamTargetStepname );</span>
+<span class="fc" id="L335">      MetaInjectOutputField aField = null;</span>
+<span class="fc bfc" id="L336" title="All 2 branches covered.">      for ( int i = 0; i &lt;  sourceOutputFields.size(); i++ ) {</span>
+<span class="fc" id="L337">        aField = sourceOutputFields.get( i );</span>
+<span class="fc" id="L338">        rep.saveStepAttribute( id_transformation, id_step, i, SOURCE_OUTPUT_FIELD_NAME, aField.getName() );</span>
+<span class="fc" id="L339">        rep.saveStepAttribute( id_transformation, id_step, i, SOURCE_OUTPUT_FIELD_TYPE, aField.getTypeDescription() );</span>
+<span class="fc" id="L340">        rep.saveStepAttribute( id_transformation, id_step, i, SOURCE_OUTPUT_FIELD_LENGTH, aField.getLength() );</span>
+<span class="fc" id="L341">        rep.saveStepAttribute( id_transformation, id_step, i, SOURCE_OUTPUT_FIELD_PRECISION, aField.getPrecision() );</span>
+      }
+
+<span class="fc" id="L344">      rep.saveStepAttribute( id_transformation, id_step, TARGET_FILE, targetFile );</span>
+<span class="fc" id="L345">      rep.saveStepAttribute( id_transformation, id_step, NO_EXECUTION, noExecution );</span>
+
+<span class="fc" id="L347">      List&lt;TargetStepAttribute&gt; keySet = new ArrayList&lt;TargetStepAttribute&gt;( targetSourceMapping.keySet() );</span>
+<span class="pc bpc" id="L348" title="1 of 2 branches missed.">      for ( int i = 0; i &lt; keySet.size(); i++ ) {</span>
+<span class="nc" id="L349">        TargetStepAttribute target = keySet.get( i );</span>
+<span class="nc" id="L350">        SourceStepField source = targetSourceMapping.get( target );</span>
+
+<span class="nc" id="L352">        rep.saveStepAttribute( id_transformation, id_step, i, MAPPING_TARGET_STEP_NAME, target.getStepname() );</span>
+<span class="nc" id="L353">        rep.saveStepAttribute( id_transformation, id_step, i, MAPPING_TARGET_ATTRIBUTE_KEY, target.getAttributeKey() );</span>
+<span class="nc" id="L354">        rep.saveStepAttribute( id_transformation, id_step, i, MAPPING_TARGET_DETAIL, target.isDetail() );</span>
+<span class="nc" id="L355">        rep.saveStepAttribute( id_transformation, id_step, i, MAPPING_SOURCE_STEP, source.getStepname() );</span>
+<span class="nc" id="L356">        rep.saveStepAttribute( id_transformation, id_step, i, MAPPING_SOURCE_FIELD, source.getField() );</span>
+      }
+<span class="nc" id="L358">    } catch ( Exception e ) {</span>
+<span class="nc" id="L359">      throw new KettleException( &quot;Unable to save step information to the repository for id_step=&quot; + id_step, e );</span>
+<span class="fc" id="L360">    }</span>
+<span class="fc" id="L361">  }</span>
+
+  @Override
+  public void getFields( RowMetaInterface rowMeta, String origin, RowMetaInterface[] info, StepMeta nextStep,
+      VariableSpace space, Repository repository, IMetaStore metaStore ) throws KettleStepException {
+
+<span class="nc" id="L367">    rowMeta.clear(); // No defined output is expected from this step.</span>
+<span class="nc bnc" id="L368" title="All 2 branches missed.">    if ( !Const.isEmpty( sourceStepName ) ) {</span>
+<span class="nc bnc" id="L369" title="All 2 branches missed.">      for ( MetaInjectOutputField field : sourceOutputFields ) {</span>
+        try {
+<span class="nc" id="L371">          rowMeta.addValueMeta( field.createValueMeta() );</span>
+<span class="nc" id="L372">        } catch ( KettlePluginException e ) {</span>
+<span class="nc" id="L373">          throw new KettleStepException( &quot;Error creating value meta for output field '&quot; + field.getName() + &quot;'&quot;, e );</span>
+<span class="nc" id="L374">        }</span>
+<span class="nc" id="L375">      }</span>
+    }
+<span class="nc" id="L377">  }</span>
+
+  @Override
+  public StepInterface getStep( StepMeta stepMeta, StepDataInterface stepDataInterface, int cnr, TransMeta tr,
+      Trans trans ) {
+<span class="nc" id="L382">    return new MetaInject( stepMeta, stepDataInterface, cnr, tr, trans );</span>
+  }
+
+  @Override
+  public StepDataInterface getStepData() {
+<span class="nc" id="L387">    return new MetaInjectData();</span>
+  }
+
+  public Map&lt;TargetStepAttribute, SourceStepField&gt; getTargetSourceMapping() {
+<span class="fc" id="L391">    return targetSourceMapping;</span>
+  }
+
+  public void setTargetSourceMapping( Map&lt;TargetStepAttribute, SourceStepField&gt; targetSourceMapping ) {
+<span class="fc" id="L395">    this.targetSourceMapping = targetSourceMapping;</span>
+<span class="fc" id="L396">  }</span>
+
+  /**
+   * @return the transName
+   */
+  public String getTransName() {
+<span class="fc" id="L402">    return transName;</span>
+  }
+
+  /**
+   * @param transName
+   *          the transName to set
+   */
+  public void setTransName( String transName ) {
+<span class="fc" id="L410">    this.transName = transName;</span>
+<span class="fc" id="L411">  }</span>
+
+  /**
+   * @return the fileName
+   */
+  public String getFileName() {
+<span class="fc" id="L417">    return fileName;</span>
+  }
+
+  /**
+   * @param fileName
+   *          the fileName to set
+   */
+  public void setFileName( String fileName ) {
+<span class="fc" id="L425">    this.fileName = fileName;</span>
+<span class="fc" id="L426">  }</span>
+
+  /**
+   * @return the directoryPath
+   */
+  public String getDirectoryPath() {
+<span class="fc" id="L432">    return directoryPath;</span>
+  }
+
+  /**
+   * @param directoryPath
+   *          the directoryPath to set
+   */
+  public void setDirectoryPath( String directoryPath ) {
+<span class="fc" id="L440">    this.directoryPath = directoryPath;</span>
+<span class="fc" id="L441">  }</span>
+
+  /**
+   * @return the transObjectId
+   */
+  public ObjectId getTransObjectId() {
+<span class="fc" id="L447">    return transObjectId;</span>
+  }
+
+  /**
+   * @param transObjectId
+   *          the transObjectId to set
+   */
+  public void setTransObjectId( ObjectId transObjectId ) {
+<span class="fc" id="L455">    this.transObjectId = transObjectId;</span>
+<span class="fc" id="L456">  }</span>
+
+  @Injection( name = &quot;TRANS_OBJECT_ID&quot; )
+  public void setTransStringObjectId( String transStringObjectId ) {
+<span class="fc" id="L460">    this.transObjectId = new StringObjectId( transStringObjectId );</span>
+<span class="fc" id="L461">  }</span>
+
+  /**
+   * @return the specificationMethod
+   */
+  public ObjectLocationSpecificationMethod getSpecificationMethod() {
+<span class="fc" id="L467">    return specificationMethod;</span>
+  }
+
+  /**
+   * @param specificationMethod
+   *          the specificationMethod to set
+   */
+  public void setSpecificationMethod( ObjectLocationSpecificationMethod specificationMethod ) {
+<span class="fc" id="L475">    this.specificationMethod = specificationMethod;</span>
+<span class="fc" id="L476">  }</span>
+
+  @Deprecated
+  public static final synchronized TransMeta loadTransformationMeta( MetaInjectMeta mappingMeta, Repository rep,
+      VariableSpace space ) throws KettleException {
+<span class="nc" id="L481">    return loadTransformationMeta( mappingMeta, rep, null, space );</span>
+  }
+
+  public static final synchronized TransMeta loadTransformationMeta( MetaInjectMeta injectMeta, Repository rep,
+      IMetaStore metaStore, VariableSpace space ) throws KettleException {
+<span class="nc" id="L486">    TransMeta mappingTransMeta = null;</span>
+
+<span class="nc" id="L488">    CurrentDirectoryResolver resolver = new CurrentDirectoryResolver();</span>
+<span class="nc" id="L489">    VariableSpace tmpSpace =</span>
+<span class="nc" id="L490">        resolver.resolveCurrentDirectory( injectMeta.getSpecificationMethod(), space, rep, injectMeta</span>
+<span class="nc" id="L491">            .getParentStepMeta(), injectMeta.getFileName() );</span>
+
+<span class="nc bnc" id="L493" title="All 4 branches missed.">    switch ( injectMeta.getSpecificationMethod() ) {</span>
+      case FILENAME:
+<span class="nc" id="L495">        String realFilename = tmpSpace.environmentSubstitute( injectMeta.getFileName() );</span>
+        try {
+          // OK, load the meta-data from file...
+          //
+          // Don't set internal variables: they belong to the parent thread!
+          //
+<span class="nc" id="L501">          mappingTransMeta = new TransMeta( realFilename, metaStore, rep, false, tmpSpace, null );</span>
+<span class="nc" id="L502">          mappingTransMeta.getLogChannel().logDetailed( &quot;Loading Mapping from repository&quot;,</span>
+              &quot;Mapping transformation was loaded from XML file [&quot; + realFilename + &quot;]&quot; );
+<span class="nc" id="L504">        } catch ( Exception e ) {</span>
+<span class="nc" id="L505">          throw new KettleException( BaseMessages.getString( PKG,</span>
+              &quot;MetaInjectMeta.Exception.UnableToLoadTransformationFromFile&quot;, realFilename ), e );
+<span class="nc" id="L507">        }</span>
+        break;
+
+      case REPOSITORY_BY_NAME:
+<span class="nc" id="L511">        String realTransname = tmpSpace.environmentSubstitute( injectMeta.getTransName() );</span>
+<span class="nc" id="L512">        String realDirectory = tmpSpace.environmentSubstitute( injectMeta.getDirectoryPath() );</span>
+
+<span class="nc bnc" id="L514" title="All 6 branches missed.">        if ( !Const.isEmpty( realTransname ) &amp;&amp; !Const.isEmpty( realDirectory ) &amp;&amp; rep != null ) {</span>
+<span class="nc" id="L515">          RepositoryDirectoryInterface repdir = rep.findDirectory( realDirectory );</span>
+<span class="nc bnc" id="L516" title="All 2 branches missed.">          if ( repdir != null ) {</span>
+            try {
+              // reads the last revision in the repository...
+              //
+              // TODO: FIXME: see if we need to pass external MetaStore references to the repository?
+              //
+<span class="nc" id="L522">              mappingTransMeta = rep.loadTransformation( realTransname, repdir, null, true, null );</span>
+
+<span class="nc" id="L524">              mappingTransMeta.getLogChannel().logDetailed( &quot;Loading Mapping from repository&quot;,</span>
+                  &quot;Mapping transformation [&quot; + realTransname + &quot;] was loaded from the repository&quot; );
+<span class="nc" id="L526">            } catch ( Exception e ) {</span>
+<span class="nc" id="L527">              throw new KettleException( &quot;Unable to load transformation [&quot; + realTransname + &quot;]&quot;, e );</span>
+<span class="nc" id="L528">            }</span>
+          } else {
+<span class="nc" id="L530">            throw new KettleException( BaseMessages.getString( PKG,</span>
+                &quot;MetaInjectMeta.Exception.UnableToLoadTransformationFromRepository&quot;, realTransname, realDirectory ) );
+          }
+<span class="nc" id="L533">        }</span>
+        break;
+
+      case REPOSITORY_BY_REFERENCE:
+        // Read the last revision by reference...
+<span class="nc" id="L538">        mappingTransMeta = rep.loadTransformation( injectMeta.getTransObjectId(), null );</span>
+<span class="nc" id="L539">        break;</span>
+      default:
+        break;
+    }
+
+    // Pass some important information to the mapping transformation metadata:
+    //
+<span class="nc" id="L546">    mappingTransMeta.copyVariablesFrom( space );</span>
+<span class="nc" id="L547">    mappingTransMeta.setRepository( rep );</span>
+<span class="nc" id="L548">    mappingTransMeta.setFilename( mappingTransMeta.getFilename() );</span>
+
+<span class="nc" id="L550">    return mappingTransMeta;</span>
+  }
+
+  /**
+   * package-local visibility for testing purposes
+   */
+  TransMeta loadTransformationMeta( Repository rep, VariableSpace space ) throws KettleException {
+<span class="nc" id="L557">    return MetaInjectMeta.loadTransformationMeta( this, repository, null, space );</span>
+  }
+
+  @Override
+  public List&lt;ResourceReference&gt; getResourceDependencies( TransMeta transMeta, StepMeta stepInfo ) {
+<span class="fc" id="L562">    List&lt;ResourceReference&gt; references = new ArrayList&lt;ResourceReference&gt;( 5 );</span>
+<span class="fc" id="L563">    String realFilename = transMeta.environmentSubstitute( fileName );</span>
+<span class="fc" id="L564">    String realTransname = transMeta.environmentSubstitute( transName );</span>
+<span class="fc" id="L565">    ResourceReference reference = new ResourceReference( stepInfo );</span>
+<span class="fc" id="L566">    references.add( reference );</span>
+
+<span class="fc bfc" id="L568" title="All 2 branches covered.">    if ( !Const.isEmpty( realFilename ) ) {</span>
+      // Add the filename to the references, including a reference to this step
+      // meta data.
+      //
+<span class="fc" id="L572">      reference.getEntries().add( new ResourceEntry( realFilename, ResourceType.ACTIONFILE ) );</span>
+<span class="fc bfc" id="L573" title="All 2 branches covered.">    } else if ( !Const.isEmpty( realTransname ) ) {</span>
+      // Add the filename to the references, including a reference to this step
+      // meta data.
+      //
+<span class="fc" id="L577">      reference.getEntries().add( new ResourceEntry( realTransname, ResourceType.ACTIONFILE ) );</span>
+    }
+<span class="fc" id="L579">    return references;</span>
+  }
+
+  @Override
+  public String exportResources( VariableSpace space, Map&lt;String, ResourceDefinition&gt; definitions,
+      ResourceNamingInterface resourceNamingInterface, Repository repository, IMetaStore metaStore )
+        throws KettleException {
+    try {
+      // Try to load the transformation from repository or file.
+      // Modify this recursively too...
+      //
+      // NOTE: there is no need to clone this step because the caller is
+      // responsible for this.
+      //
+      // First load the executor transformation metadata...
+      //
+<span class="fc" id="L595">      TransMeta executorTransMeta = loadTransformationMeta( repository, space );</span>
+
+      // Also go down into the mapping transformation and export the files
+      // there. (mapping recursively down)
+      //
+<span class="fc" id="L600">      String proposedNewFilename =</span>
+<span class="fc" id="L601">          executorTransMeta.exportResources( executorTransMeta, definitions, resourceNamingInterface, repository,</span>
+              metaStore );
+
+      // To get a relative path to it, we inject
+      // ${Internal.Transformation.Filename.Directory}
+      //
+<span class="fc" id="L607">      String newFilename =</span>
+          &quot;${&quot; + Const.INTERNAL_VARIABLE_TRANSFORMATION_FILENAME_DIRECTORY + &quot;}/&quot; + proposedNewFilename;
+
+      // Set the correct filename inside the XML.
+      //
+<span class="fc" id="L612">      executorTransMeta.setFilename( newFilename );</span>
+
+      // exports always reside in the root directory, in case we want to turn
+      // this into a file repository...
+      //
+<span class="fc" id="L617">      executorTransMeta.setRepositoryDirectory( new RepositoryDirectory() );</span>
+
+      // change it in the entry
+      //
+<span class="fc" id="L621">      fileName = newFilename;</span>
+
+<span class="fc" id="L623">      return proposedNewFilename;</span>
+<span class="nc" id="L624">    } catch ( Exception e ) {</span>
+<span class="nc" id="L625">      throw new KettleException( BaseMessages.getString( PKG, &quot;MetaInjectMeta.Exception.UnableToLoadTrans&quot;,</span>
+          fileName ) );
+    }
+  }
+
+  @Override
+  public boolean excludeFromCopyDistributeVerification() {
+<span class="nc" id="L632">    return true;</span>
+  }
+
+  @Override
+  public boolean excludeFromRowLayoutVerification() {
+<span class="nc" id="L637">    return true;</span>
+  }
+
+  /**
+   * @return the sourceStepName
+   */
+  public String getSourceStepName() {
+<span class="fc" id="L644">    return sourceStepName;</span>
+  }
+
+  /**
+   * @param sourceStepName
+   *          the sourceStepName to set
+   */
+  public void setSourceStepName( String sourceStepName ) {
+<span class="fc" id="L652">    this.sourceStepName = sourceStepName;</span>
+<span class="fc" id="L653">  }</span>
+
+  /**
+   * @return the targetFile
+   */
+  public String getTargetFile() {
+<span class="fc" id="L659">    return targetFile;</span>
+  }
+
+  /**
+   * @param targetFile
+   *          the targetFile to set
+   */
+  public void setTargetFile( String targetFile ) {
+<span class="fc" id="L667">    this.targetFile = targetFile;</span>
+<span class="fc" id="L668">  }</span>
+
+  /**
+   * @return the noExecution
+   */
+  public boolean isNoExecution() {
+<span class="fc" id="L674">    return noExecution;</span>
+  }
+
+  /**
+   * @param noExecution
+   *          the noExecution to set
+   */
+  public void setNoExecution( boolean noExecution ) {
+<span class="fc" id="L682">    this.noExecution = noExecution;</span>
+<span class="fc" id="L683">  }</span>
+
+  /**
+   * @return The objects referenced in the step, like a mapping, a transformation, a job, ...
+   */
+  @Override
+  public String[] getReferencedObjectDescriptions() {
+<span class="nc" id="L690">    return new String[] { BaseMessages.getString( PKG, &quot;MetaInjectMeta.ReferencedObject.Description&quot; ), };</span>
+  }
+
+  private boolean isTransformationDefined() {
+<span class="nc bnc" id="L694" title="All 6 branches missed.">    return !Const.isEmpty( fileName ) || transObjectId != null || ( !Const.isEmpty( this.directoryPath ) &amp;&amp; !Const</span>
+<span class="nc bnc" id="L695" title="All 2 branches missed.">        .isEmpty( transName ) );</span>
+  }
+
+  @Override
+  public boolean[] isReferencedObjectEnabled() {
+<span class="nc" id="L700">    return new boolean[] { isTransformationDefined(), };</span>
+  }
+
+  @Override
+  public String getActiveReferencedObjectDescription() {
+<span class="nc" id="L705">    return BaseMessages.getString( PKG, &quot;MetaInjectMeta.ReferencedObjectAfterInjection.Description&quot; );</span>
+  }
+
+  @Override
+  @Deprecated
+  public Object loadReferencedObject( int index, Repository rep, VariableSpace space ) throws KettleException {
+<span class="nc" id="L711">    return loadReferencedObject( index, rep, null, space );</span>
+  }
+
+  /**
+   * Load the referenced object
+   *
+   * @param meta
+   *          The metadata that references
+   * @param index
+   *          the object index to load
+   * @param rep
+   *          the repository
+   * @param metaStore
+   *          metaStore
+   * @param space
+   *          the variable space to use
+   * @return the referenced object once loaded
+   * @throws KettleException
+   */
+  @Override
+  public Object loadReferencedObject( int index, Repository rep, IMetaStore metaStore, VariableSpace space )
+    throws KettleException {
+<span class="nc" id="L733">    return loadTransformationMeta( this, rep, metaStore, space );</span>
+  }
+
+  public String getStreamSourceStepname() {
+<span class="fc" id="L737">    return streamSourceStepname;</span>
+  }
+
+  public void setStreamSourceStepname( String streamSourceStepname ) {
+<span class="fc" id="L741">    this.streamSourceStepname = streamSourceStepname;</span>
+<span class="fc" id="L742">  }</span>
+
+  public StepMeta getStreamSourceStep() {
+<span class="fc" id="L745">    return streamSourceStep;</span>
+  }
+
+  public void setStreamSourceStep( StepMeta streamSourceStep ) {
+<span class="nc" id="L749">    this.streamSourceStep = streamSourceStep;</span>
+<span class="nc" id="L750">  }</span>
+
+  public String getStreamTargetStepname() {
+<span class="fc" id="L753">    return streamTargetStepname;</span>
+  }
+
+  public void setStreamTargetStepname( String streamTargetStepname ) {
+<span class="fc" id="L757">    this.streamTargetStepname = streamTargetStepname;</span>
+<span class="fc" id="L758">  }</span>
+
+  @Override
+  public void searchInfoAndTargetSteps( List&lt;StepMeta&gt; steps ) {
+<span class="nc" id="L762">    streamSourceStep = StepMeta.findStep( steps, streamSourceStepname );</span>
+<span class="nc" id="L763">  }</span>
+
+  public List&lt;MetaInjectOutputField&gt; getSourceOutputFields() {
+<span class="fc" id="L766">    return sourceOutputFields;</span>
+  }
+
+  public void setSourceOutputFields( List&lt;MetaInjectOutputField&gt; sourceOutputFields ) {
+<span class="fc" id="L770">    this.sourceOutputFields = sourceOutputFields;</span>
+<span class="fc" id="L771">  }</span>
+
+  public List&lt;MetaInjectMapping&gt; getMetaInjectMapping() {
+<span class="fc" id="L774">    return metaInjectMapping;</span>
+  }
+
+  public void setMetaInjectMapping( List&lt;MetaInjectMapping&gt; metaInjectMapping ) {
+<span class="nc" id="L778">    this.metaInjectMapping = metaInjectMapping;</span>
+<span class="nc" id="L779">  }</span>
+
+  public void actualizeMetaInjectMapping() {
+<span class="pc bpc" id="L782" title="3 of 4 branches missed.">    if ( metaInjectMapping == null || metaInjectMapping.isEmpty() ) {</span>
+<span class="fc" id="L783">      return;</span>
+    }
+<span class="nc" id="L785">    Map&lt;TargetStepAttribute, SourceStepField&gt; targetToSourceMap = convertToMap( metaInjectMapping );</span>
+<span class="nc" id="L786">    setTargetSourceMapping( targetToSourceMap );</span>
+<span class="nc" id="L787">  }</span>
+
+  /**
+   * package-local visibility for testing purposes
+   */
+  static Map&lt;TargetStepAttribute, SourceStepField&gt; convertToMap( List&lt;MetaInjectMapping&gt; metaInjectMapping ) {
+<span class="fc" id="L793">    Map&lt;TargetStepAttribute, SourceStepField&gt; targetToSourceMap = new HashMap&lt;TargetStepAttribute, SourceStepField&gt;();</span>
+<span class="fc bfc" id="L794" title="All 2 branches covered.">    for ( MetaInjectMapping mappingEntry : metaInjectMapping ) {</span>
+<span class="pc bpc" id="L795" title="1 of 2 branches missed.">      if ( !isMappingEntryFilled( mappingEntry ) ) {</span>
+<span class="nc" id="L796">        continue;</span>
+      }
+<span class="fc" id="L798">      TargetStepAttribute targetStepAttribute = createTargetStepAttribute( mappingEntry );</span>
+<span class="fc" id="L799">      SourceStepField sourceStepField = createSourceStepField( mappingEntry );</span>
+<span class="fc" id="L800">      targetToSourceMap.put( targetStepAttribute, sourceStepField );</span>
+<span class="fc" id="L801">    }</span>
+<span class="fc" id="L802">    return targetToSourceMap;</span>
+  }
+
+  private static TargetStepAttribute createTargetStepAttribute( MetaInjectMapping mappingEntry ) {
+<span class="fc" id="L806">    String targetFieldName = mappingEntry.getTargetField();</span>
+<span class="pc bpc" id="L807" title="1 of 2 branches missed.">    if ( targetFieldName.contains( GROUP_AND_NAME_DELIMITER ) ) {</span>
+<span class="nc" id="L808">      String[] targetFieldGroupAndName = targetFieldName.split( &quot;\\&quot; + GROUP_AND_NAME_DELIMITER );</span>
+<span class="nc" id="L809">      return new TargetStepAttribute( mappingEntry.getTargetStep(), targetFieldGroupAndName[1], true );</span>
+    }
+<span class="fc" id="L811">    return new TargetStepAttribute( mappingEntry.getTargetStep(), mappingEntry.getTargetField(), false );</span>
+  }
+
+  private static boolean isMappingEntryFilled( MetaInjectMapping mappingEntry ) {
+<span class="pc bpc" id="L815" title="2 of 4 branches missed.">    if ( mappingEntry.getSourceStep() == null || mappingEntry.getSourceField() == null || mappingEntry</span>
+<span class="pc bpc" id="L816" title="2 of 4 branches missed.">        .getTargetStep() == null || mappingEntry.getTargetField() == null ) {</span>
+<span class="nc" id="L817">      return false;</span>
+    }
+<span class="fc" id="L819">    return true;</span>
+  }
+
+  private static SourceStepField createSourceStepField( MetaInjectMapping mappingEntry ) {
+<span class="fc" id="L823">    return new SourceStepField( mappingEntry.getSourceStep(), mappingEntry.getSourceField() );</span>
+  }
+
+  @Override
+  public void onStepChange( TransMeta transMeta, StepMeta oldMeta, StepMeta newMeta ) {
+<span class="fc bfc" id="L828" title="All 2 branches covered.">    for ( int i = 0; i &lt; transMeta.nrTransHops(); i++ ) {</span>
+<span class="fc" id="L829">      TransHopMeta hopMeta = transMeta.getTransHop( i );</span>
+<span class="pc bpc" id="L830" title="1 of 2 branches missed.">      if ( hopMeta.getFromStep().equals( oldMeta ) ) {</span>
+<span class="fc" id="L831">        StepMeta toStepMeta = hopMeta.getToStep();</span>
+<span class="pc bpc" id="L832" title="2 of 4 branches missed.">        if ( ( toStepMeta.getStepMetaInterface() instanceof MetaInjectMeta ) &amp;&amp; ( toStepMeta.equals( this</span>
+<span class="fc" id="L833">            .getParentStepMeta() ) ) ) {</span>
+<span class="fc" id="L834">          MetaInjectMeta toMeta = (MetaInjectMeta) toStepMeta.getStepMetaInterface();</span>
+<span class="fc" id="L835">          Map&lt;TargetStepAttribute, SourceStepField&gt; sourceMapping = toMeta.getTargetSourceMapping();</span>
+<span class="fc bfc" id="L836" title="All 2 branches covered.">          for ( Entry&lt;TargetStepAttribute, SourceStepField&gt; entry : sourceMapping.entrySet() ) {</span>
+<span class="fc" id="L837">            SourceStepField value = entry.getValue();</span>
+<span class="pc bpc" id="L838" title="1 of 2 branches missed.">            if ( value.getStepname().equals( oldMeta.getName() ) ) {</span>
+<span class="fc" id="L839">              value.setStepname( newMeta.getName() );</span>
+            }
+<span class="fc" id="L841">          }</span>
+        }
+      }
+    }
+<span class="fc" id="L845">  }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.5.201505241946</span></div></body></html>

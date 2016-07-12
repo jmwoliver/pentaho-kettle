@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../.resources/report.css" type="text/css"/><link rel="shortcut icon" href="../.resources/report.gif" type="image/gif"/><title>MetaInjectMapping.java</title><link rel="stylesheet" href="../.resources/prettify.css" type="text/css"/><script type="text/javascript" src="../.resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../.sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">meta-inject-plugin</a> &gt; <a href="index.source.html" class="el_package">org.pentaho.di.trans.steps.metainject</a> &gt; <span class="el_source">MetaInjectMapping.java</span></div><h1>MetaInjectMapping.java</h1><pre class="source lang-java linenums">/*! ******************************************************************************
+ *
+ * Pentaho Data Integration
+ *
+ * Copyright (C) 2002-2016 by Pentaho : http://www.pentaho.com
+ *
+ *******************************************************************************
+ *
+ * Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);
+ * you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an &quot;AS IS&quot; BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ ******************************************************************************/
+
+package org.pentaho.di.trans.steps.metainject;
+
+import org.pentaho.di.core.injection.Injection;
+
+public class MetaInjectMapping {
+
+  @Injection( name = &quot;MAPPING_SOURCE_STEP&quot;, group = &quot;MAPPING_FIELDS&quot; )
+  private String sourceStep;
+
+  @Injection( name = &quot;MAPPING_SOURCE_FIELD&quot;, group = &quot;MAPPING_FIELDS&quot; )
+  private String sourceField;
+
+  @Injection( name = &quot;MAPPING_TARGET_STEP&quot;, group = &quot;MAPPING_FIELDS&quot; )
+  private String targetStep;
+
+  @Injection( name = &quot;MAPPING_TARGET_FIELD&quot;, group = &quot;MAPPING_FIELDS&quot; )
+  private String targetField;
+
+<span class="fc" id="L41">  public MetaInjectMapping() {</span>
+<span class="fc" id="L42">  }</span>
+
+  public String getSourceStep() {
+<span class="fc" id="L45">    return sourceStep;</span>
+  }
+
+  public void setSourceStep( String sourceStep ) {
+<span class="fc" id="L49">    this.sourceStep = sourceStep;</span>
+<span class="fc" id="L50">  }</span>
+
+  public String getSourceField() {
+<span class="fc" id="L53">    return sourceField;</span>
+  }
+
+  public void setSourceField( String sourceField ) {
+<span class="fc" id="L57">    this.sourceField = sourceField;</span>
+<span class="fc" id="L58">  }</span>
+
+  public String getTargetStep() {
+<span class="fc" id="L61">    return targetStep;</span>
+  }
+
+  public void setTargetStep( String targetStep ) {
+<span class="fc" id="L65">    this.targetStep = targetStep;</span>
+<span class="fc" id="L66">  }</span>
+
+  public String getTargetField() {
+<span class="fc" id="L69">    return targetField;</span>
+  }
+
+  public void setTargetField( String targetField ) {
+<span class="fc" id="L73">    this.targetField = targetField;</span>
+<span class="fc" id="L74">  }</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.eclemma.org/jacoco">JaCoCo</a> 0.7.5.201505241946</span></div></body></html>
